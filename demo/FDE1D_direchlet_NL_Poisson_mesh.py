@@ -25,7 +25,7 @@ bc2 = 0
 
 root_mesh = UniformMesh1D(nodes[0], nodes[-1], nodes[1] - nodes[0], bc1, bc2)
 
-Meshes = Uniform1DMeshesTree(root_mesh, refinement_coeficient=2, aligned=True)
+Meshes = Uniform1DMeshesTree(root_mesh, refinement_coefficient=2, aligned=True)
 
 root_mesh, Psi = dirichlet_non_linear_poisson_solver_reccurent_mesh(root_mesh, Psi, f, dfdDPsi, max_iterations=1000,
                                                                     threshold=1e-6, debug=True)
