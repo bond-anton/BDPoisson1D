@@ -43,7 +43,7 @@ integral = np.trapz(f(nodes), nodes)
 print(integral, bc2 - bc1)
 print(np.allclose(integral, bc2 - bc1))
 
-y_solution, residual = neumann_poisson_solver(nodes, f, bc1, bc2, y0=y(start), debug=True)
+y_solution, residual = neumann_poisson_solver(nodes, f, bc1, bc2, y0=y(start))
 dy_solution = np.gradient(y_solution, nodes, edge_order=2)
 d2y_solution = np.gradient(dy_solution, nodes, edge_order=2)
 

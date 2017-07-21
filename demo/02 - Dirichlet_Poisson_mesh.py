@@ -40,7 +40,7 @@ start = -1.0
 stop = 2.0
 mesh = UniformMesh1D(start, stop, 0.02, y(start), y(stop), crop=None)
 
-mesh = dirichlet_poisson_solver_mesh(mesh, f, debug=True)  # solve Poisson equation
+mesh = dirichlet_poisson_solver_mesh(mesh, f)  # solve Poisson equation
 
 dy_solution = np.gradient(mesh.solution, mesh.phys_nodes(), edge_order=2)
 d2y_solution = np.gradient(dy_solution, mesh.phys_nodes(), edge_order=2)

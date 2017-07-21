@@ -42,7 +42,7 @@ nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
 bc1 = y(start)  # left Dirichlet boundary condition
 bc2 = y(stop)  # right Dirichlet boundary condition
 
-y_solution, residual = dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1, debug=True)  # solve Poisson equation
+y_solution, residual = dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1)  # solve Poisson equation
 
 dy_solution = np.gradient(y_solution, nodes, edge_order=2)
 d2y_solution = np.gradient(dy_solution, nodes, edge_order=2)
