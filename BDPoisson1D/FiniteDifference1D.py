@@ -24,7 +24,7 @@ def fd_d2_matrix(size):
     return sparse.diags([c, a, b], offsets=[-1, 0, 1], shape=(size, size), format='csc')
 
 
-def dirichlet_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, debug=False):
+def dirichlet_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -36,33 +36,22 @@ def dirichlet_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, debug=False):
     :param bc1: boundary condition at nodes[0] point (a number).
     :param bc2: boundary condition at nodes[0] point (a number).
     :param j: Jacobian.
-    :param debug: if set to True prints debugging messages. Default value is False.
     :return:
         y: 1D array of solution function y(x) values on nodes array.
         residual: error of the solution.
     """
-
-    t0 = time.time()  # start time
     step = nodes[1:-1] - nodes[:-2]  # grid step
     m = fd_d2_matrix(nodes.size - 2)
     y = np.array([bc1] + [0] * (nodes.size - 2) + [bc2])  # solution vector
     f = (j * step) ** 2 * f_nodes[1:-1] - np.delete(y, [1, 2])
-
-    if debug:
-        print('Time spent on matrix filling %2.2f s' % (time.time() - t0))
-    t0 = time.time()
-    if debug:
-        print(m.todense())
     y[1:-1] = linalg.spsolve(m, f, use_umfpack=True)
-    if debug:
-        print('Time spent on solution %2.2f s' % (time.time() - t0))
     dy = np.gradient(y, nodes, edge_order=2) / j
     d2y = np.gradient(dy, nodes, edge_order=2) / j
     residual = f_nodes - d2y
     return y, residual
 
 
-def dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1, debug=False):
+def dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -74,15 +63,14 @@ def dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1, debug=False):
     :param bc1: boundary condition at nodes[0] point (a number).
     :param bc2: boundary condition at nodes[0] point (a number).
     :param j: Jacobian.
-    :param debug: if set to True prints debugging messages. Default value is False.
     :return:
         y: 1D array of solution function y(x) values on nodes array.
         residual: error of the solution.
     """
-    return dirichlet_poisson_solver_arrays(nodes, f(nodes), bc1, bc2, j, debug)
+    return dirichlet_poisson_solver_arrays(nodes, f(nodes), bc1, bc2, j)
 
 
-def dirichlet_poisson_solver_mesh_arrays(mesh, f_nodes, debug=False):
+def dirichlet_poisson_solver_mesh_arrays(mesh, f_nodes):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -91,17 +79,16 @@ def dirichlet_poisson_solver_mesh_arrays(mesh, f_nodes, debug=False):
 
     :param mesh: BDMesh to solve on.
     :param f_nodes: 1D array of values of f(x) on nodes array. Must be same shape as nodes.
-    :param debug: If set to True prints debugging messages. Default value is False.
     :return: mesh with solution and residual
     """
-    y, residual = dirichlet_poisson_solver_arrays(mesh.local_nodes, f_nodes, mesh.bc1, mesh.bc2, mesh.J, debug)
+    y, residual = dirichlet_poisson_solver_arrays(mesh.local_nodes, f_nodes, mesh.bc1, mesh.bc2, mesh.J)
     mesh.solution = y
     mesh.residual = residual
     mesh.int_residual = np.trapz(mesh.residual, mesh.phys_nodes())
     return mesh
 
 
-def dirichlet_poisson_solver_mesh(mesh, f, debug=False):
+def dirichlet_poisson_solver_mesh(mesh, f):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -110,10 +97,9 @@ def dirichlet_poisson_solver_mesh(mesh, f, debug=False):
 
     :param mesh: BDMesh to solve on.
     :param f: function f(x) callable on nodes array.
-    :param debug: If set to True prints debugging messages. Default value is False.
     :return: mesh with solution and residual
     """
-    return dirichlet_poisson_solver_mesh_arrays(mesh, f(mesh.phys_nodes()), debug)
+    return dirichlet_poisson_solver_mesh_arrays(mesh, f(mesh.phys_nodes()))
 
 
 def neumann_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, y0=0, debug=False):
@@ -129,22 +115,16 @@ def neumann_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, y0=0, debug=Fal
     :param bc2: boundary condition at nodes[0] point (a number).
     :param j: Jacobian.
     :param y0: value of y(x) at point x0 of nodes array
-    :param debug: if set to True prints debugging messages. Default value is False.
     :return:
         y: 1D array of solution function y(x) values on nodes array.
         residual: error of the solution.
     """
     integral = np.trapz(f_nodes, nodes)
-    if debug:
-        print('Checking if the problem is well-posed')
-    if debug:
-        print('Integral of f =', integral, '=?', bc2 - bc1, ':', np.allclose(integral, bc2 - bc1))
     if not np.allclose(integral, bc2 - bc1):
         print('WARNING!!!!')
         print('The problem is not well-posed!')
         print('Redefine the f function and BCs or refine the mesh!')
         print('WARNING!!!!')
-    t0 = time.time()
     step = nodes[1:] - nodes[:-1]  # grid step
     m = fd_d2_matrix(nodes.size - 1)
     m[0, 0] = 0
@@ -153,21 +133,14 @@ def neumann_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, y0=0, debug=Fal
     f = (j * step) ** 2 * f_nodes[1:]
     f[0] += step[0] ** 2 * f_nodes[0] + 2 * step[0] * bc1 + y0
     f[-1] -= 2 * step[-1] * bc2
-    if debug:
-        print('Time spent on matrix filling %2.2f s' % (time.time() - t0))
-    t0 = time.time()
-    if debug:
-        print(m.todense())
     y[1:] = linalg.spsolve(m, f, use_umfpack=True)
-    if debug:
-        print('Time spent on solution %2.2f s' % (time.time() - t0))
     dy = np.gradient(y, nodes, edge_order=2) / j
     d2y = np.gradient(dy, nodes, edge_order=2) / j
     residual = f_nodes - d2y
     return y, residual
 
 
-def neumann_poisson_solver(nodes, f, bc1, bc2, j=1, y0=0, debug=False):
+def neumann_poisson_solver(nodes, f, bc1, bc2, j=1, y0=0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -180,12 +153,11 @@ def neumann_poisson_solver(nodes, f, bc1, bc2, j=1, y0=0, debug=False):
     :param bc2: boundary condition at nodes[0] point (a number).
     :param j: Jacobian.
     :param y0: value of y(x) at point x0 of nodes array
-    :param debug: if set to True prints debugging messages. Default value is False.
     :return:
         y: 1D array of solution function y(x) values on nodes array.
         residual: error of the solution.
     """
-    return neumann_poisson_solver_arrays(nodes, f(nodes), bc1, bc2, j, y0, debug)
+    return neumann_poisson_solver_arrays(nodes, f(nodes), bc1, bc2, j, y0)
 
 
 def dirichlet_non_linear_poisson_solver_arrays(nodes, Psi0_nodes, f_nodes, dfdDPsi_nodes, bc1, bc2, J=1, rel=False, W=1,
