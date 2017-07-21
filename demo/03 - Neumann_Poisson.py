@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 from matplotlib import pyplot as plt
 
-from BDPoisson1D import dirichlet_poisson_solver
+from BDPoisson1D import neumann_poisson_solver
 
 
 def y(x):
@@ -32,22 +32,21 @@ def d2y_numeric(x):
     return np.gradient(dy_numeric(x), x, edge_order=2)
 
 
-def f(x):
-    return d2y_numeric(x)
+f = lambda x: d2y_numeric(x)
 
-start = -1.0
+start = 0.0
 stop = 2.0
+nodes = np.linspace(start, stop, num=5001, endpoint=True)
+bc1 = dy_numeric(nodes)[0]
+bc2 = dy_numeric(nodes)[-1]
+integral = np.trapz(f(nodes), nodes)
+print(integral, bc2 - bc1)
+print(np.allclose(integral, bc2 - bc1))
 
-nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
-bc1 = y(start)  # left Dirichlet boundary condition
-bc2 = y(stop)  # right Dirichlet boundary condition
-
-y_solution, residual = dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1, debug=True)  # solve Poisson equation
-
+y_solution, residual = neumann_poisson_solver(nodes, f, bc1, bc2, y0=y(start), debug=True)
 dy_solution = np.gradient(y_solution, nodes, edge_order=2)
 d2y_solution = np.gradient(dy_solution, nodes, edge_order=2)
 
-# Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 ax1.plot(nodes, f(nodes), 'r-', label='f(x)')
 ax1.plot(nodes, d2y_solution, 'b-', label='d2y/dx2 (solution)')
