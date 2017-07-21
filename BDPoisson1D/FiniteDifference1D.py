@@ -9,62 +9,74 @@ from scipy.sparse import linalg
 from matplotlib import pyplot as plt
 
 from BDMesh import UniformMesh1D, Uniform1DMeshesTree
-from BDPoisson1D._helpers import interp_Fn
+from ._helpers import interp_Fn
 
 
 def fd_d2_matrix(size):
-    A = -2 * np.ones(size)
-    B = np.ones(size - 1)
-    C = np.ones(size - 1)
-    data = [C, A, B]
-    diags = [-1, 0, 1]
-    M = sparse.diags(data, diags, (size, size), format='csc')
-    return M
+    a = -2 * np.ones(size)
+    b = np.ones(size - 1)
+    c = np.ones(size - 1)
+    return sparse.diags([c, a, b], offsets=[-1, 0, 1], shape=(size, size), format='csc')
 
 
-def dirichlet_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, J=1, debug=False):
-    '''
-    solves equation of form d2Psi/dx2 = f(x)
-    Psi(x0) = bc1, Psi(xn) = bc2
+def dirichlet_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, debug=False):
+    """
+    Solves 1D differential equation of the form
+        d2y/dx2 = f(x)
+        y(x0) = bc1, y(xn) = bc2
     using FDE algorithm of O(h2) precision
-    f_nodes - is the values of f on nodes array
-    we suppose that nodes include boundary points
-    '''
+
+    :param nodes: 1D array of x nodes. Must include boundary points.
+    :param f_nodes: 1D array of values of f(x) on nodes array. Must be same shape as nodes.
+    :param bc1: Boundary condition at nodes[0] point (a number)
+    :param bc2: Boundary condition at nodes[0] point (a number)
+    :param j: Jacobian
+    :param debug: If set to True prints debugging messages. Default value is False.
+    :return:
+        y: 1D array of solution function y(x) values on nodes array
+        residual: error of the solution
+    """
+
+    t0 = time.time()  # start time
+    step = nodes[1:-1] - nodes[:-2]  # grid step
+    m = fd_d2_matrix(nodes.size - 2)
+    y = np.array([bc1] + [0] * (nodes.size - 2) + [bc2])  # solution vector
+    f = (j * step) ** 2 * f_nodes[1:-1] - np.delete(y, [1, 2])
+
+    if debug:
+        print('Time spent on matrix filling %2.2f s' % (time.time() - t0))
     t0 = time.time()
-    h = nodes[1:-1] - nodes[:-2]  # grid step
-    M = fd_d2_matrix(nodes.size - 2)
-    Psi = np.zeros_like(nodes)  # solution vector
-    F = (J * h) ** 2 * f_nodes[1:-1]
-    F[0] -= bc1
-    F[-1] -= bc2
-    Psi[0] = bc1
-    Psi[-1] = bc2
-    if debug: print
-    'Time spent on matrix filling %2.2f s' % (time.time() - t0)
-    t0 = time.time()
-    if debug: print
-    M.todense()
-    Psi[1:-1] = linalg.spsolve(M, F, use_umfpack=True)
-    if debug: print
-    'Time spent on solution %2.2f s' % (time.time() - t0)
-    dx = np.gradient(nodes)
-    dPsi = np.gradient(Psi, dx, edge_order=2) / J
-    d2Psi = np.gradient(dPsi, dx, edge_order=2) / J
-    R = f_nodes - d2Psi
-    return Psi, R
+    if debug:
+        print(m.todense())
+    y[1:-1] = linalg.spsolve(m, f, use_umfpack=True)
+    if debug:
+        print('Time spent on solution %2.2f s' % (time.time() - t0))
+    dy = np.gradient(y, nodes, edge_order=2) / j
+    d2y = np.gradient(dy, nodes, edge_order=2) / j
+    residual = f_nodes - d2y
+    return y, residual
 
 
-def dirichlet_poisson_solver(nodes, f, bc1, bc2, J=1, debug=False):
-    '''
-    solves equation of form d2Psi/dx2 = f(x)
-    Psi(x0) = bc1, Psi(xn) = bc2
+def dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1, debug=False):
+    """
+    Solves 1D differential equation of the form
+        d2y/dx2 = f(x)
+        y(x0) = bc1, y(xn) = bc2
     using FDE algorithm of O(h2) precision
-    f - should be a function callable on nodes array
-    we suppose that nodes include boundary points
-    '''
+
+    :param nodes: 1D array of x nodes. Must include boundary points.
+    :param f: function f(x) callable on nodes array
+    :param bc1: Boundary condition at nodes[0] point (a number)
+    :param bc2: Boundary condition at nodes[0] point (a number)
+    :param j: Jacobian
+    :param debug: If set to True prints debugging messages. Default value is False.
+    :return:
+        y: 1D array of solution function y(x) values on nodes array
+        residual: error of the solution
+    """
     f_nodes = f(nodes)
-    Psi, R = dirichlet_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, J, debug)
-    return Psi, R
+    y, residual = dirichlet_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j, debug)
+    return y, residual
 
 
 def dirichlet_poisson_solver_mesh_arrays(mesh, f_nodes, debug=False):

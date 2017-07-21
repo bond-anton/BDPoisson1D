@@ -52,7 +52,7 @@ setup(
     keywords='Mesh',
 
     packages=find_packages(exclude=['demo', 'tests', 'docs', 'contrib']),
-    install_requires=['numpy', 'BDMesh>=0.0.1'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'BDMesh>=0.0.1'],
     dependency_links=['https://github.com/bond-anton/BDMesh/tarball/master#egg=BDMesh-0.0.1'],
     test_suite='nose.collector',
 )
