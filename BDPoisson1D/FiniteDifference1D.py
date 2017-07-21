@@ -291,13 +291,13 @@ def dirichlet_non_linear_poisson_solver_reccurent_mesh(mesh, Psi0, f, dfdDPsi,
 
     i = 1
     while abs(mesh.int_residual) > threshold and i < max_iterations and np.max(abs(DPsi)) > 2 * np.finfo(np.float).eps:
-        if debug: print
-        'Iteration:', i
+        if debug:
+            print('Iteration:', i)
         # time.sleep(1)
         mesh, Psi0, DPsi = dirichlet_non_linear_poisson_solver_mesh(mesh, Psi0, f, dfdDPsi, debug=False)
         int_residual_array.append(mesh.int_residual)
-        if debug: print
-        'Integrated residual:', mesh.int_residual
+        if debug:
+            print('Integrated residual:', mesh.int_residual)
         if debug:
             Psi_line.set_ydata(mesh.solution)
             f_line.set_ydata(f(mesh.phys_nodes(), Psi0))
@@ -332,12 +332,11 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20):
     nodes is the initial physical mesh
     '''
     root_mesh = UniformMesh1D(nodes[0], nodes[-1], nodes[1] - nodes[0], bc1, bc2)
-    Meshes = Uniform1DMeshesTree(root_mesh, refinement_coeficient=2, aligned=True)
+    Meshes = Uniform1DMeshesTree(root_mesh, refinement_coefficient=2, aligned=True)
     converged = np.zeros(1)
     level = 0
     while (not converged.all() or level < Meshes.levels[-1]) and level <= max_level:
-        print
-        'Solving for Meshes of level:', level, 'of', Meshes.levels[-1]
+        print('Solving for Meshes of level:', level, 'of', Meshes.levels[-1])
         converged = np.zeros(len(Meshes.Tree[level]))
         for mesh_id, mesh in enumerate(Meshes.Tree[level]):
             mesh = dirichlet_poisson_solver_mesh(mesh, f, debug=False)
@@ -345,13 +344,11 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20):
             refinement_points_chunks = points_for_refinement(mesh, threshold)
             if len(refinement_points_chunks) == 0 or np.all(
                     np.array([block.size == 0 for block in refinement_points_chunks])):
-                print
-                'CONVERGED!'
+                print('CONVERGED!')
                 converged[mesh_id] = True
                 continue
             if level < max_level:
-                print
-                'nodes for refinement:', refinement_points_chunks
+                print('nodes for refinement:', refinement_points_chunks)
                 for block in refinement_points_chunks:
                     idx1, idx2, mesh_crop = adjust_range(block, mesh.num - 1, crop=[3, 3],
                                                          step_scale=Meshes.refinement_coefficient)
@@ -366,9 +363,8 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20):
                     Meshes.add_mesh(refinement_mesh)
                     # Meshes.plot_tree()
         level += 1
-        print
-    print
-    'Mesh tree has ', Meshes.levels[-1], 'refinement levels'
+        print()
+    print('Mesh tree has ', Meshes.levels[-1], 'refinement levels')
     return Meshes
 
 
@@ -380,12 +376,12 @@ def dirichlet_non_linear_poisson_solver_amr(nodes, Psi, f, dfdDPsi, bc1, bc2,
     nodes is the initial physical mesh
     '''
     root_mesh = UniformMesh1D(nodes[0], nodes[-1], nodes[1] - nodes[0], bc1, bc2)
-    Meshes = Uniform1DMeshesTree(root_mesh, refinement_coeficient=2, aligned=True)
+    Meshes = Uniform1DMeshesTree(root_mesh, refinement_coefficient=2, aligned=True)
     converged = np.zeros(1)
     level = 0
     while (not converged.all() or level < Meshes.levels[-1]) and level <= max_level:
-        if debug: print
-        'Solving for Meshes of level:', level, 'of', Meshes.levels[-1]
+        if debug:
+            print('Solving for Meshes of level:', level, 'of', Meshes.levels[-1])
         converged = np.zeros(len(Meshes.Tree[level]))
         for mesh_id, mesh in enumerate(Meshes.Tree[level]):
             mesh, Psi = dirichlet_non_linear_poisson_solver_reccurent_mesh(mesh, Psi, f, dfdDPsi,
@@ -405,18 +401,16 @@ def dirichlet_non_linear_poisson_solver_amr(nodes, Psi, f, dfdDPsi, bc1, bc2,
                 converged[mesh_id] = True
                 continue
             if level < max_level:
-                if debug: print
-                'nodes for refinement:', refinement_points_chunks
+                if debug:
+                    print('nodes for refinement:', refinement_points_chunks)
                 for block in refinement_points_chunks:
                     idx1, idx2, crop = adjust_range(block, mesh.num - 1, crop=[3, 3], step_scale=2)
                     start_point = mesh.to_phys(mesh.local_nodes[idx1])
                     stop_point = mesh.to_phys(mesh.local_nodes[idx2])
                     ref_bc1 = mesh.solution[idx1]
                     ref_bc2 = mesh.solution[idx2]
-                    print
-                    start_point, stop_point
-                    print
-                    ref_bc1, ref_bc2
+                    print(start_point, stop_point)
+                    print(ref_bc1, ref_bc2)
                     refinement_mesh = UniformMesh1D(start_point, stop_point,
                                                     mesh.phys_step / Meshes.refinement_coefficient, ref_bc1, ref_bc2,
                                                     crop=crop)
@@ -431,8 +425,7 @@ def dirichlet_non_linear_poisson_solver_amr(nodes, Psi, f, dfdDPsi, bc1, bc2,
                         plt.show()
                 if debug: Meshes.plot_tree()
         level += 1
-    if debug: print
-    'Mesh tree has ', Meshes.levels[-1], 'refinement levels'
+    if debug: print('Mesh tree has ', Meshes.levels[-1], 'refinement levels')
     return Meshes
 
 
