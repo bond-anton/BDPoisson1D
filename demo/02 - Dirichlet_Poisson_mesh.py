@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_poisson_solver_mesh
-from BDMesh import UniformMesh1D
+from BDMesh import MeshUniform1D
 
 
 def y(x):
@@ -38,27 +38,27 @@ def f(x):
 
 start = -1.0
 stop = 2.0
-mesh = UniformMesh1D(start, stop, 0.02, y(start), y(stop), crop=None)
+mesh = MeshUniform1D(start, stop, 0.02, y(start), y(stop), crop=None)
 
 mesh = dirichlet_poisson_solver_mesh(mesh, f)  # solve Poisson equation
 
-dy_solution = np.gradient(mesh.solution, mesh.phys_nodes(), edge_order=2)
-d2y_solution = np.gradient(dy_solution, mesh.phys_nodes(), edge_order=2)
+dy_solution = np.gradient(mesh.solution, mesh.physical_nodes, edge_order=2)
+d2y_solution = np.gradient(dy_solution, mesh.physical_nodes, edge_order=2)
 
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
-ax1.plot(mesh.phys_nodes(), f(mesh.phys_nodes()), 'r-', label='f(x)')
-ax1.plot(mesh.phys_nodes(), d2y_solution, 'b-', label='d2y/dx2 (solution)')
+ax1.plot(mesh.physical_nodes, f(mesh.physical_nodes), 'r-', label='f(x)')
+ax1.plot(mesh.physical_nodes, d2y_solution, 'b-', label='d2y/dx2 (solution)')
 ax1.legend()
 
-ax2.plot(mesh.phys_nodes(), dy_numeric(mesh.phys_nodes()), 'r-', label='dy/dx')
-ax2.plot(mesh.phys_nodes(), dy_solution, 'b-', label='dy/dx (solution)')
+ax2.plot(mesh.physical_nodes, dy_numeric(mesh.physical_nodes), 'r-', label='dy/dx')
+ax2.plot(mesh.physical_nodes, dy_solution, 'b-', label='dy/dx (solution)')
 ax2.legend()
 
-ax3.plot(mesh.phys_nodes(), mesh.solution, 'b-', label='solution')
-ax3.plot(mesh.phys_nodes(), y(mesh.phys_nodes()), 'r-', label='y(x)')
+ax3.plot(mesh.physical_nodes, mesh.solution, 'b-', label='solution')
+ax3.plot(mesh.physical_nodes, y(mesh.physical_nodes), 'r-', label='y(x)')
 ax3.legend()
 
-ax4.plot(mesh.phys_nodes(), mesh.residual, 'g-o', label='residual')
+ax4.plot(mesh.physical_nodes, mesh.residual, 'g-o', label='residual')
 ax4.legend()
 plt.show()

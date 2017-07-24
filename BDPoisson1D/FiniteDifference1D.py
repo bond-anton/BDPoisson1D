@@ -8,7 +8,7 @@ from scipy import sparse
 from scipy.sparse import linalg
 from matplotlib import pyplot as plt
 
-from BDMesh import UniformMesh1D, Uniform1DMeshesTree
+from BDMesh import MeshUniform1D, TreeMeshUniform1D
 from ._helpers import interp_Fn
 
 
@@ -81,10 +81,12 @@ def dirichlet_poisson_solver_mesh_arrays(mesh, f_nodes):
     :param f_nodes: 1D array of values of f(x) on nodes array. Must be same shape as nodes.
     :return: mesh with solution and residual
     """
-    y, residual = dirichlet_poisson_solver_arrays(mesh.local_nodes, f_nodes, mesh.bc1, mesh.bc2, mesh.J)
+    assert isinstance(mesh, MeshUniform1D)
+    y, residual = dirichlet_poisson_solver_arrays(mesh.local_nodes, f_nodes,
+                                                  mesh.boundary_condition_1, mesh.boundary_condition_2,
+                                                  mesh.jacobian)
     mesh.solution = y
     mesh.residual = residual
-    mesh.int_residual = np.trapz(mesh.residual, mesh.phys_nodes())
     return mesh
 
 
@@ -99,10 +101,11 @@ def dirichlet_poisson_solver_mesh(mesh, f):
     :param f: function f(x) callable on nodes array.
     :return: mesh with solution and residual
     """
-    return dirichlet_poisson_solver_mesh_arrays(mesh, f(mesh.phys_nodes()))
+    assert isinstance(mesh, MeshUniform1D)
+    return dirichlet_poisson_solver_mesh_arrays(mesh, f(mesh.physical_nodes))
 
 
-def neumann_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, y0=0, debug=False):
+def neumann_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, y0=0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -334,15 +337,15 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20):
     The same as above but uses the Adaptive Mesh Refinement
     nodes is the initial physical mesh
     '''
-    root_mesh = UniformMesh1D(nodes[0], nodes[-1], nodes[1] - nodes[0], bc1, bc2)
-    Meshes = Uniform1DMeshesTree(root_mesh, refinement_coefficient=2, aligned=True)
+    root_mesh = MeshUniform1D(nodes[0], nodes[-1], nodes[1] - nodes[0], bc1, bc2)
+    Meshes = TreeMeshUniform1D(root_mesh, refinement_coefficient=2, aligned=True)
     converged = np.zeros(1)
     level = 0
     while (not converged.all() or level < Meshes.levels[-1]) and level <= max_level:
         print('Solving for Meshes of level:', level, 'of', Meshes.levels[-1])
-        converged = np.zeros(len(Meshes.Tree[level]))
-        for mesh_id, mesh in enumerate(Meshes.Tree[level]):
-            mesh = dirichlet_poisson_solver_mesh(mesh, f, debug=False)
+        converged = np.zeros(len(Meshes.tree[level]))
+        for mesh_id, mesh in enumerate(Meshes.tree[level]):
+            mesh = dirichlet_poisson_solver_mesh(mesh, f)
             mesh.trim()
             refinement_points_chunks = points_for_refinement(mesh, threshold)
             if len(refinement_points_chunks) == 0 or np.all(
@@ -355,12 +358,13 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20):
                 for block in refinement_points_chunks:
                     idx1, idx2, mesh_crop = adjust_range(block, mesh.num - 1, crop=[3, 3],
                                                          step_scale=Meshes.refinement_coefficient)
-                    start_point = mesh.to_phys(mesh.local_nodes[idx1])
-                    stop_point = mesh.to_phys(mesh.local_nodes[idx2])
+                    start_point = mesh.to_physical_coordinate(mesh.local_nodes[idx1])
+                    stop_point = mesh.to_physical_coordinate(mesh.local_nodes[idx2])
                     ref_bc1 = mesh.solution[idx1]
                     ref_bc2 = mesh.solution[idx2]
-                    refinement_mesh = UniformMesh1D(start_point, stop_point,
-                                                    mesh.phys_step / Meshes.refinement_coefficient, ref_bc1, ref_bc2,
+                    refinement_mesh = MeshUniform1D(start_point, stop_point,
+                                                    mesh.physical_step / Meshes.refinement_coefficient,
+                                                    ref_bc1, ref_bc2,
                                                     crop=mesh_crop)
                     # print 'CROP:', crop
                     Meshes.add_mesh(refinement_mesh)
@@ -378,29 +382,29 @@ def dirichlet_non_linear_poisson_solver_amr(nodes, Psi, f, dfdDPsi, bc1, bc2,
     The recurrent NL Poisson solver with the Adaptive Mesh Refinement
     nodes is the initial physical mesh
     '''
-    root_mesh = UniformMesh1D(nodes[0], nodes[-1], nodes[1] - nodes[0], bc1, bc2)
-    Meshes = Uniform1DMeshesTree(root_mesh, refinement_coefficient=2, aligned=True)
+    root_mesh = MeshUniform1D(nodes[0], nodes[-1], nodes[1] - nodes[0], bc1, bc2)
+    Meshes = TreeMeshUniform1D(root_mesh, refinement_coefficient=2, aligned=True)
     converged = np.zeros(1)
     level = 0
     while (not converged.all() or level < Meshes.levels[-1]) and level <= max_level:
         if debug:
             print('Solving for Meshes of level:', level, 'of', Meshes.levels[-1])
-        converged = np.zeros(len(Meshes.Tree[level]))
-        for mesh_id, mesh in enumerate(Meshes.Tree[level]):
+        converged = np.zeros(len(Meshes.tree[level]))
+        for mesh_id, mesh in enumerate(Meshes.tree[level]):
             mesh, Psi = dirichlet_non_linear_poisson_solver_reccurent_mesh(mesh, Psi, f, dfdDPsi,
                                                                            max_iterations, int_residual_threshold,
                                                                            debug=debug)
             mesh.trim()
             if max(abs(mesh.residual)) < residual_threshold:
-                if debug: print
-                'CONVERGED!'
+                if debug:
+                    print('CONVERGED!')
                 converged[mesh_id] = True
                 continue
             refinement_points_chunks = points_for_refinement(mesh, mesh_refinement_threshold)
             if len(refinement_points_chunks) == 0 or np.all(
                     np.array([block.size == 0 for block in refinement_points_chunks])):
-                if debug: print
-                'CONVERGED!'
+                if debug:
+                    print('CONVERGED!')
                 converged[mesh_id] = True
                 continue
             if level < max_level:
@@ -408,14 +412,15 @@ def dirichlet_non_linear_poisson_solver_amr(nodes, Psi, f, dfdDPsi, bc1, bc2,
                     print('nodes for refinement:', refinement_points_chunks)
                 for block in refinement_points_chunks:
                     idx1, idx2, crop = adjust_range(block, mesh.num - 1, crop=[3, 3], step_scale=2)
-                    start_point = mesh.to_phys(mesh.local_nodes[idx1])
-                    stop_point = mesh.to_phys(mesh.local_nodes[idx2])
+                    start_point = mesh.to_physical_coordinate(mesh.local_nodes[idx1])
+                    stop_point = mesh.to_physical_coordinate(mesh.local_nodes[idx2])
                     ref_bc1 = mesh.solution[idx1]
                     ref_bc2 = mesh.solution[idx2]
                     print(start_point, stop_point)
                     print(ref_bc1, ref_bc2)
-                    refinement_mesh = UniformMesh1D(start_point, stop_point,
-                                                    mesh.phys_step / Meshes.refinement_coefficient, ref_bc1, ref_bc2,
+                    refinement_mesh = MeshUniform1D(start_point, stop_point,
+                                                    mesh.physical_step / Meshes.refinement_coefficient,
+                                                    ref_bc1, ref_bc2,
                                                     crop=crop)
                     # print 'CROP:', crop
                     Meshes.add_mesh(refinement_mesh)
@@ -423,10 +428,11 @@ def dirichlet_non_linear_poisson_solver_amr(nodes, Psi, f, dfdDPsi, bc1, bc2,
                     Psi = interp1d(flat_grid, Psi(flat_grid), kind='cubic')
                     if debug:
                         _, ax = plt.subplots(1)
-                        ax.plot(mesh.phys_nodes(), mesh.solution, 'b-o')
-                        ax.plot(refinement_mesh.phys_nodes(), Psi(refinement_mesh.phys_nodes()), 'radius-o')
+                        ax.plot(mesh.physical_nodes, mesh.solution, 'b-o')
+                        ax.plot(refinement_mesh.physical_nodes, Psi(refinement_mesh.physical_nodes), 'r-o')
                         plt.show()
-                if debug: Meshes.plot_tree()
+                if debug:
+                    Meshes.plot_tree()
         level += 1
     if debug: print('Mesh tree has ', Meshes.levels[-1], 'refinement levels')
     return Meshes
