@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import numpy as np
 from scipy.sparse import linalg
 
-from BDMesh import MeshUniform1D, TreeMeshUniform1D
+from BDMesh import Mesh1DUniform, TreeMesh1DUniform
 from ._helpers import fd_d2_matrix, points_for_refinement, adjust_range
 
 
@@ -64,7 +64,7 @@ def dirichlet_poisson_solver_mesh_arrays(mesh, f_nodes):
     :param f_nodes: 1D array of values of f(x) on nodes array. Must be same shape as nodes.
     :return: mesh with solution and residual.
     """
-    assert isinstance(mesh, MeshUniform1D)
+    assert isinstance(mesh, Mesh1DUniform)
     y, residual = dirichlet_poisson_solver_arrays(mesh.local_nodes, f_nodes,
                                                   mesh.boundary_condition_1, mesh.boundary_condition_2,
                                                   mesh.jacobian)
@@ -84,7 +84,7 @@ def dirichlet_poisson_solver_mesh(mesh, f):
     :param f: function f(x) callable on nodes array.
     :return: mesh with solution and residual.
     """
-    assert isinstance(mesh, MeshUniform1D)
+    assert isinstance(mesh, Mesh1DUniform)
     return dirichlet_poisson_solver_mesh_arrays(mesh, f(mesh.physical_nodes))
 
 
@@ -99,12 +99,16 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20, ve
     :param max_level: max level of mesh refinement.
     :return: meshes tree with solution and residual.
     """
-    root_mesh = MeshUniform1D(nodes[0], nodes[-1], nodes[1] - nodes[0], bc1, bc2)
-    meshes_tree = TreeMeshUniform1D(root_mesh, refinement_coefficient=2, aligned=False)
+    root_mesh = Mesh1DUniform(nodes[0], nodes[-1],
+                              boundary_condition_1=bc1,
+                              boundary_condition_2=bc2,
+                              physical_step=nodes[1]-nodes[0])
+    meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=False)
     converged = np.zeros(1)
     level = 0
     while (not converged.all() or level < meshes_tree.levels[-1]) and level <= max_level:
         if verbose:
+            print(meshes_tree.tree)
             print('Solving for', len(meshes_tree.tree[level]),'Meshes of level:', level, 'of', meshes_tree.levels[-1])
         converged = np.zeros(len(meshes_tree.tree[level]))
         for mesh_id, mesh in enumerate(meshes_tree.tree[level]):
@@ -148,11 +152,18 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20, ve
                     stop_point = mesh.to_physical_coordinate(mesh.local_nodes[idx2])
                     ref_bc1 = mesh.solution[idx1]
                     ref_bc2 = mesh.solution[idx2]
-                    refinement_mesh = MeshUniform1D(start_point, stop_point,
-                                                    mesh.physical_step / meshes_tree.refinement_coefficient,
-                                                    ref_bc1, ref_bc2,
+                    refinement_mesh = Mesh1DUniform(start_point, stop_point,
+                                                    boundary_condition_1=ref_bc1,
+                                                    boundary_condition_2=ref_bc2,
+                                                    physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
                                                     crop=mesh_crop)
                     meshes_tree.add_mesh(refinement_mesh)
+                    print(refinement_mesh.physical_step, mesh.physical_step)
+                    print('%2.9f %2.9f %2.9f' % (start_point, stop_point,
+                                                 mesh.physical_step/meshes_tree.refinement_coefficient))
+                    print((stop_point - start_point) / mesh.physical_step * meshes_tree.refinement_coefficient)
+                    print(mesh, '->', refinement_mesh)
+                    print(refinement_mesh.physical_boundary_1, refinement_mesh.physical_boundary_2)
         level += 1
     if verbose:
         print('Mesh tree has ', meshes_tree.levels[-1], 'refinement levels')

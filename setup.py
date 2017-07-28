@@ -40,7 +40,7 @@ setup(
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
-        'Topic :: Database',
+        'Topic :: Scientific/Engineering :: Mathematics',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
@@ -49,10 +49,11 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
 
-    keywords='Mesh',
+    keywords='FiniteDifference PDE Poisson',
 
     packages=find_packages(exclude=['demo', 'tests', 'docs', 'contrib']),
-    install_requires=['numpy', 'scipy', 'matplotlib', 'BDMesh>=0.0.1'],
-    dependency_links=['https://github.com/bond-anton/BDMesh/tarball/master#egg=BDMesh-0.0.1'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'BDMesh>=0.1.0'],
+    dependency_links=['https://github.com/bond-anton/BDMesh/tarball/master#egg=BDMesh-0.1.1'],
     test_suite='nose.collector',
+    tests_require=['nose']
 )

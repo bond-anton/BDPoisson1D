@@ -4,7 +4,7 @@ import numpy as np
 from scipy import sparse
 from scipy.interpolate import interp1d
 
-from BDMesh import MeshUniform1D
+from BDMesh import Mesh1DUniform
 
 
 def fd_d2_matrix(size):
@@ -60,7 +60,7 @@ def interp_Fn(Z, F, interp_type='linear'):
 
 
 def points_for_refinement(mesh, threshold):
-    assert isinstance(mesh, MeshUniform1D)
+    assert isinstance(mesh, Mesh1DUniform)
     assert isinstance(threshold, (float, int))
     bad_nodes = np.sort(np.where(abs(mesh.residual) > threshold)[0])
     split_idx = np.where(bad_nodes[1:] - bad_nodes[:-1] > 1)[0] + 1
@@ -69,7 +69,6 @@ def points_for_refinement(mesh, threshold):
 
 
 def adjust_range(idx_range, max_index, crop=None, step_scale=1):
-
     idx1 = idx_range[0] if idx_range[0] >= 0 else 0
     idx2 = idx_range[-1] if idx_range[-1] <= max_index else max_index
     mesh_crop = [0, 0]

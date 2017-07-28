@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_poisson_solver_mesh
-from BDMesh import MeshUniform1D
+from BDMesh import Mesh1DUniform
 
 
 def y(x):
@@ -38,7 +38,9 @@ def f(x):
 
 start = -1.0
 stop = 2.0
-mesh = MeshUniform1D(start, stop, 0.02, y(start), y(stop), crop=None)
+mesh = Mesh1DUniform(start, stop,
+                     boundary_condition_1=y(start), boundary_condition_2=y(stop),
+                     physical_step=0.02, crop=None)
 
 mesh = dirichlet_poisson_solver_mesh(mesh, f)  # solve Poisson equation
 
