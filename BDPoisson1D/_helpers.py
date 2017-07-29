@@ -19,24 +19,24 @@ def fd_d2_matrix(size):
     return sparse.diags([c, a, b], offsets=[-1, 0, 1], shape=(size, size), format='csc')
 
 
-def interp_fn(x, f, extrapolation='linear'):
+def interp_fn(x, y, extrapolation='linear'):
     """
     scipy interp1d wrapper to simplify usage
     :param x: 1D array of x nodes values
-    :param f: 1D array of the same size as x of interpolated function values at x nodes
+    :param y: 1D array of the same size as x of interpolated function values at x nodes
     :param extrapolation: extrapolation style could be one of 'linear', 'last', and 'zero'
-    :return: function of single argument x which interpolates given input data [x, f]
+    :return: function of single argument x which interpolates given input data [x, y]
     """
     if extrapolation == 'linear':
         fill_value = 'extrapolate'
     elif extrapolation == 'last':
-        fill_value = (f[0], f[-1])
+        fill_value = (y[0], y[-1])
     elif extrapolation == 'zero':
         fill_value = 0.0
     else:
         fill_value = np.nan
-    interpolator = interp1d(x, f, bounds_error=False, fill_value=fill_value)
-    return interpolator
+    f = interp1d(x, y, bounds_error=False, fill_value=fill_value)
+    return f
 
 
 def points_for_refinement(mesh, threshold):
