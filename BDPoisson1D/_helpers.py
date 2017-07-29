@@ -19,44 +19,24 @@ def fd_d2_matrix(size):
     return sparse.diags([c, a, b], offsets=[-1, 0, 1], shape=(size, size), format='csc')
 
 
-def interp_Fn(Z, F, interp_type='linear'):
+def interp_fn(x, f, extrapolation='linear'):
     """
-    Z and F must be 1D arrays of equal size
-    interp_type could be one of
-    'linear'
-    'last'
-    'zero'
+    scipy interp1d wrapper to simplify usage
+    :param x: 1D array of x nodes values
+    :param f: 1D array of the same size as x of interpolated function values at x nodes
+    :param extrapolation: extrapolation style could be one of 'linear', 'last', and 'zero'
+    :return: function of single argument x which interpolates given input data [x, f]
     """
-    # print 'type:', interp_type
-    def interp(z):
-        interpolator = interp1d(Z, F, bounds_error=True)
-        xs = interpolator.x
-        ys = interpolator.y
-
-        def pointwise(x):
-            if x < xs[0]:
-                if interp_type == 'linear':
-                    return ys[0] + (x - xs[0]) * (ys[1] - ys[0]) / (xs[1] - xs[0])
-                elif interp_type == 'last':
-                    return ys[0]
-                elif interp_type == 'zero':
-                    return 0.0
-            elif x > xs[-1]:
-                if interp_type == 'linear':
-                    return ys[-1] + (x - xs[-1]) * (ys[-1] - ys[-2]) / (xs[-1] - xs[-2])
-                elif interp_type == 'last':
-                    return ys[-1]
-                elif interp_type == 'zero':
-                    return 0.0
-            else:
-                return np.float(interpolator(x))
-
-        if isinstance(z, (np.ndarray, list, tuple)):
-            return np.array([pointwise(z_i) for z_i in z], dtype=np.float)
-        else:
-            return pointwise(z)
-
-    return interp
+    if extrapolation == 'linear':
+        fill_value = 'extrapolate'
+    elif extrapolation == 'last':
+        fill_value = (f[0], f[-1])
+    elif extrapolation == 'zero':
+        fill_value = 0.0
+    else:
+        fill_value = np.nan
+    interpolator = interp1d(x, f, bounds_error=False, fill_value=fill_value)
+    return interpolator
 
 
 def points_for_refinement(mesh, threshold):
