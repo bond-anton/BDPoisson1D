@@ -57,33 +57,35 @@ def points_for_refinement(mesh, threshold):
 def adjust_range(idx_range, max_index, crop=None, step_scale=1):
     """
     Calculates start and stop indices for refinement mesh generation given a range of indices
-    :param idx_range: 1D array of indices of nodes to build refinement mesh on
+    :param idx_range: 1D array of sorted indices of nodes to build refinement mesh on
     :param max_index: max allowed index
     :param crop: a tuple of two integers (number of nodes of final mesh to be appended for later crop
     :param step_scale: step scale coefficient between original and generated meshes
     :return: a pair of indices and a crop tuple for refinement mesh constructor
     """
-    idx1 = idx_range[0] if idx_range[0] >= 0 else 0
-    idx2 = idx_range[-1] if idx_range[-1] <= max_index else max_index
+    if crop is None:
+        crop = [0, 0]
+    idx1 = max(idx_range[0], 0)
+    idx2 = min(idx_range[-1], max_index)
     mesh_crop = [0, 0]
     if idx2 - idx1 < 2:
-        if idx1 == 0 and idx2 != max_index:
-            idx2 += 1
-        elif idx2 == max_index and idx1 != 0:
-            idx1 -= 1
-        elif idx2 == max_index and idx1 == 0:
+        if idx2 == max_index and idx1 == 0:
             raise ValueError('the range is too short!')
+        if idx1 == 0 and idx2 < max_index:
+            idx2 += 1
+        elif idx2 == max_index and idx1 > 0:
+            idx1 -= 1
         else:
             idx1 -= 1
             idx2 += 1
-    if (idx1 - m.floor(step_scale * crop[0])) >= 0:
-        mesh_crop[0] = int(crop[0])
+    if (idx1 - m.ceil(crop[0] / step_scale)) >= 0:
+        mesh_crop[0] = int(m.ceil(crop[0] / step_scale) * step_scale)
     else:
-        mesh_crop[0] = int(m.floor(idx1 / step_scale))
-    idx1 -= int(m.floor(step_scale * mesh_crop[0]))
-    if (idx2 + m.ceil(step_scale * crop[1])) <= max_index:
-        mesh_crop[1] = int(crop[1])
+        mesh_crop[0] = int(m.floor(idx1 * step_scale))
+    idx1 -= int(m.ceil(mesh_crop[0] / step_scale))
+    if (idx2 + m.ceil(crop[1] / step_scale)) <= max_index:
+        mesh_crop[1] = int(m.ceil(crop[1] / step_scale) * step_scale)
     else:
-        mesh_crop[1] = int(m.floor((max_index - idx2) / step_scale))
-    idx2 += int(m.floor(step_scale * mesh_crop[1]))
+        mesh_crop[1] = int(m.floor((max_index - idx2) * step_scale))
+    idx2 += int(m.ceil(mesh_crop[1] / step_scale))
     return idx1, idx2, mesh_crop

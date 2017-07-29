@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 
-from BDPoisson1D._helpers import fd_d2_matrix, interp_fn, points_for_refinement
+from BDPoisson1D._helpers import fd_d2_matrix, interp_fn, points_for_refinement, adjust_range
 from BDMesh import Mesh1DUniform
 
 import unittest
@@ -64,3 +64,33 @@ class TestHelpers(unittest.TestCase):
             points_for_refinement(1, threshold=threshold)
         with self.assertRaises(AssertionError):
             points_for_refinement(mesh, threshold='a')
+
+    def test_adjust_range(self):
+        idx_range = np.array([0, 1])
+        with self.assertRaises(ValueError):
+            adjust_range(idx_range, max_index=1, crop=None, step_scale=2)
+        idx_range = np.array([0, 1])
+        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, crop=None, step_scale=2)
+        self.assertEqual(idx1, 0)
+        self.assertEqual(idx2, 2)
+        self.assertEqual(mesh_crop, [0, 0])
+        idx_range = np.array([9, 10])
+        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, crop=None, step_scale=2)
+        self.assertEqual(idx1, 8)
+        self.assertEqual(idx2, 10)
+        self.assertEqual(mesh_crop, [0, 0])
+        idx_range = np.array([4, 5])
+        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, crop=None, step_scale=2)
+        self.assertEqual(idx1, 3)
+        self.assertEqual(idx2, 6)
+        self.assertEqual(mesh_crop, [0, 0])
+        idx_range = np.array([4, 7])
+        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, crop=[3, 3], step_scale=2)
+        self.assertEqual(idx1, 2)
+        self.assertEqual(idx2, 9)
+        self.assertEqual(mesh_crop, [4, 4])
+        idx_range = np.array([1, 9])
+        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, crop=[3, 3], step_scale=2)
+        self.assertEqual(idx1, 0)
+        self.assertEqual(idx2, 10)
+        self.assertEqual(mesh_crop, [2, 2])
