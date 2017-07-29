@@ -1,7 +1,8 @@
 from __future__ import division, print_function
 import numpy as np
 
-from BDPoisson1D._helpers import fd_d2_matrix, interp_fn
+from BDPoisson1D._helpers import fd_d2_matrix, interp_fn, points_for_refinement
+from BDMesh import Mesh1DUniform
 
 import unittest
 
@@ -48,3 +49,18 @@ class TestHelpers(unittest.TestCase):
         np.testing.assert_allclose(f(np.arange(20) - 5), np.hstack((np.array([np.nan] * 5),
                                                                     k * (np.arange(10)),
                                                                     np.array([np.nan] * 5))))
+
+    def test_points_for_refinement(self):
+        mesh = Mesh1DUniform(0, 10, physical_step=1.0)
+        threshold = 0.5
+        indices = points_for_refinement(mesh, threshold=threshold)
+        np.testing.assert_equal(indices[0], np.array([]))
+        mesh.residual = [0.6, 0, 0, 0.6, 0.6, 0.5, 0, 0, 0.6, 0.6, 0.6]
+        indices = points_for_refinement(mesh, threshold=threshold)
+        np.testing.assert_equal(indices[0], np.array([0]))
+        np.testing.assert_equal(indices[1], np.array([3, 4]))
+        np.testing.assert_equal(indices[2], np.array([8, 9, 10]))
+        with self.assertRaises(AssertionError):
+            points_for_refinement(1, threshold=threshold)
+        with self.assertRaises(AssertionError):
+            points_for_refinement(mesh, threshold='a')

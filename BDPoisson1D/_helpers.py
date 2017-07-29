@@ -40,6 +40,12 @@ def interp_fn(x, y, extrapolation='linear'):
 
 
 def points_for_refinement(mesh, threshold):
+    """
+    returns sorted arrays of mesh nodes indices, which require refinement
+    :param mesh: mesh of type BDMesh.Mesh1DUniform
+    :param threshold: threshold value for mesh.residual
+    :return: arrays of bad nodes indices for refinement
+    """
     assert isinstance(mesh, Mesh1DUniform)
     assert isinstance(threshold, (float, int))
     bad_nodes = np.sort(np.where(abs(mesh.residual) > threshold)[0])
