@@ -55,6 +55,14 @@ def points_for_refinement(mesh, threshold):
 
 
 def adjust_range(idx_range, max_index, crop=None, step_scale=1):
+    """
+    Calculates start and stop indices for refinement mesh generation given a range of indices
+    :param idx_range: 1D array of indices of nodes to build refinement mesh on
+    :param max_index: max allowed index
+    :param crop: a tuple of two integers (number of nodes of final mesh to be appended for later crop
+    :param step_scale: step scale coefficient between original and generated meshes
+    :return: a pair of indices and a crop tuple for refinement mesh constructor
+    """
     idx1 = idx_range[0] if idx_range[0] >= 0 else 0
     idx2 = idx_range[-1] if idx_range[-1] <= max_index else max_index
     mesh_crop = [0, 0]
