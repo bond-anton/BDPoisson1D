@@ -26,7 +26,7 @@ def y(x):
     :param x: 1D array of nodes
     :return: y(x) values of function at x nodes
     """
-    return -20 * np.sin(2*np.pi / x**2) / (2 * np.pi) #+ 3 * x ** 2 + x + 5
+    return -20 * np.sin(2 * np.pi * x) / (2 * np.pi) + 3 * x ** 2 + x + 5
 
 
 def dy_numeric(x):
@@ -53,12 +53,16 @@ def f(x):
 start = 0.2
 stop = 1.2
 
-root_nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
+root_nodes = np.linspace(start, stop, num=101, endpoint=True)  # generate nodes
 bc1 = y(start)  # left Dirichlet boundary condition
 bc2 = y(stop)  # right Dirichlet boundary condition
 
-meshes = dirichlet_poisson_solver_amr(root_nodes, f, bc1, bc2, 5.0e-2, max_level=17, verbose=True)
-nodes, y_solution, residual = meshes.flatten()
+meshes = dirichlet_poisson_solver_amr(root_nodes, f, bc1, bc2, 5.0e-3, max_level=10, verbose=True)
+flat_mesh = meshes.flatten()
+
+nodes = flat_mesh.physical_nodes
+y_solution = flat_mesh.solution
+residual = flat_mesh.residual
 
 dy_solution = np.gradient(y_solution, nodes, edge_order=2)
 d2y_solution = np.gradient(dy_solution, nodes, edge_order=2)
@@ -91,7 +95,7 @@ ax2.legend()
 ax3.legend()
 ax4.legend()
 
-#plot_tree(meshes, ax5)
+plot_tree(meshes, ax5)
 
 plt.show()
 

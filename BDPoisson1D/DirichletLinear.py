@@ -102,11 +102,14 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20, ve
     root_mesh = Mesh1DUniform(nodes[0], nodes[-1],
                               boundary_condition_1=bc1,
                               boundary_condition_2=bc2,
-                              physical_step=nodes[1]-nodes[0])
+                              physical_step=round(nodes[1]-nodes[0],9))
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=False)
     converged = np.zeros(1)
     level = 0
-    while (not converged.all() or level < meshes_tree.levels[-1]) and level <= max_level:
+    while level <= max_level:
+        level = meshes_tree.levels[-1]
+        if converged.all():
+            break
         if verbose:
             print(meshes_tree.tree)
             print('Solving for', len(meshes_tree.tree[level]),'Meshes of level:', level, 'of', meshes_tree.levels[-1])
@@ -150,20 +153,25 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20, ve
                     mesh_crop = [crop_left[block_id], crop_right[block_id]]
                     start_point = mesh.to_physical_coordinate(mesh.local_nodes[idx1])
                     stop_point = mesh.to_physical_coordinate(mesh.local_nodes[idx2])
+
+                    #print(idx1, idx2, mesh_crop)
+                    #print('%2.9f %2.9f %2.9f' % (start_point, stop_point,
+                    #                             mesh.physical_step/meshes_tree.refinement_coefficient))
+
+                    #ref_num = (stop_point - start_point) / mesh.physical_step * meshes_tree.refinement_coefficient + 1
+                    #print(ref_num)
                     ref_bc1 = mesh.solution[idx1]
                     ref_bc2 = mesh.solution[idx2]
                     refinement_mesh = Mesh1DUniform(start_point, stop_point,
                                                     boundary_condition_1=ref_bc1,
                                                     boundary_condition_2=ref_bc2,
                                                     physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
+                                                    #num=int(ref_num),
                                                     crop=mesh_crop)
-                    meshes_tree.add_mesh(refinement_mesh)
-                    print(refinement_mesh.physical_step, mesh.physical_step)
-                    print('%2.9f %2.9f %2.9f' % (start_point, stop_point,
-                                                 mesh.physical_step/meshes_tree.refinement_coefficient))
-                    print((stop_point - start_point) / mesh.physical_step * meshes_tree.refinement_coefficient)
+                    #print(refinement_mesh.physical_step, mesh.physical_step)
                     print(mesh, '->', refinement_mesh)
-                    print(refinement_mesh.physical_boundary_1, refinement_mesh.physical_boundary_2)
+                    #print(refinement_mesh.physical_boundary_1, refinement_mesh.physical_boundary_2)
+                    meshes_tree.add_mesh(refinement_mesh)
         level += 1
     if verbose:
         print('Mesh tree has ', meshes_tree.levels[-1], 'refinement levels')
