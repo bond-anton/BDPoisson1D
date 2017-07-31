@@ -88,10 +88,13 @@ def dirichlet_poisson_solver_mesh(mesh, f):
     return dirichlet_poisson_solver_mesh_arrays(mesh, f(mesh.physical_nodes))
 
 
-def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20, verbose=False):
+def dirichlet_poisson_solver_amr(boundary_1, boundary_2, step, f, bc1, bc2,
+                                 threshold=1e-2, max_level=10, verbose=False):
     """
     Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
-    :param nodes: physical nodes of initial (root) mesh.
+    :param boundary_1: physical nodes left boundary.
+    :param boundary_2: physical nodes right boundary.
+    :param step: physical nodes step.
     :param f: function f(x) callable on nodes array.
     :param bc1: boundary condition at nodes[0] point (a number).
     :param bc2: boundary condition at nodes[n] point (a number).
@@ -99,80 +102,47 @@ def dirichlet_poisson_solver_amr(nodes, f, bc1, bc2, threshold, max_level=20, ve
     :param max_level: max level of mesh refinement.
     :return: meshes tree with solution and residual.
     """
-    root_mesh = Mesh1DUniform(nodes[0], nodes[-1],
+    root_mesh = Mesh1DUniform(boundary_1, boundary_2,
                               boundary_condition_1=bc1,
                               boundary_condition_2=bc2,
-                              physical_step=round(nodes[1]-nodes[0],9))
+                              physical_step=round(step, 9))
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=False)
     converged = np.zeros(1)
-    level = 0
-    while level <= max_level:
+    level = meshes_tree.levels[-1]
+    while level < max_level:
         level = meshes_tree.levels[-1]
         if converged.all():
             break
         if verbose:
-            print(meshes_tree.tree)
-            print('Solving for', len(meshes_tree.tree[level]),'Meshes of level:', level, 'of', meshes_tree.levels[-1])
+            print('\nSolving for', len(meshes_tree.tree[level]),'Meshes of level:', level, 'of', meshes_tree.levels[-1])
         converged = np.zeros(len(meshes_tree.tree[level]))
+        refinements = []
         for mesh_id, mesh in enumerate(meshes_tree.tree[level]):
             mesh = dirichlet_poisson_solver_mesh(mesh, f)
             mesh.trim()
             refinement_points_chunks = points_for_refinement(mesh, threshold)
-            if len(refinement_points_chunks) == 0 or np.all(
-                    np.array([block.size == 0 for block in refinement_points_chunks])):
+            if np.all(np.array([block.size == 0 for block in refinement_points_chunks])):
                 if verbose:
-                    print('CONVERGED!')
+                    print('=====> CONVERGED!')
                 converged[mesh_id] = True
                 continue
             if level < max_level:
-                left = []
-                right = []
-                crop_left = []
-                crop_right = []
                 for block in refinement_points_chunks:
                     idx1, idx2, mesh_crop = adjust_range(block, mesh.num - 1, crop=[10, 10],
                                                          step_scale=meshes_tree.refinement_coefficient)
-                    if len(left) == 0:
-                        left.append(idx1)
-                        right.append(idx2)
-                        crop_left.append(mesh_crop[0])
-                        crop_right.append(mesh_crop[1])
-                    else:
-                        if idx1 <= right[-1]:
-                            if idx2 > right[-1]:
-                                right[-1] = idx2
-                                crop_right[-1] = mesh_crop[1]
-                        else:
-                            left.append(idx1)
-                            right.append(idx2)
-                            crop_left.append(mesh_crop[0])
-                            crop_right.append(mesh_crop[1])
-                for block_id in range(len(left)):
-                    idx1 = left[block_id]
-                    idx2 = right[block_id]
-                    mesh_crop = [crop_left[block_id], crop_right[block_id]]
                     start_point = mesh.to_physical_coordinate(mesh.local_nodes[idx1])
                     stop_point = mesh.to_physical_coordinate(mesh.local_nodes[idx2])
-
-                    #print(idx1, idx2, mesh_crop)
-                    #print('%2.9f %2.9f %2.9f' % (start_point, stop_point,
-                    #                             mesh.physical_step/meshes_tree.refinement_coefficient))
-
-                    #ref_num = (stop_point - start_point) / mesh.physical_step * meshes_tree.refinement_coefficient + 1
-                    #print(ref_num)
                     ref_bc1 = mesh.solution[idx1]
                     ref_bc2 = mesh.solution[idx2]
                     refinement_mesh = Mesh1DUniform(start_point, stop_point,
                                                     boundary_condition_1=ref_bc1,
                                                     boundary_condition_2=ref_bc2,
                                                     physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
-                                                    #num=int(ref_num),
                                                     crop=mesh_crop)
-                    #print(refinement_mesh.physical_step, mesh.physical_step)
-                    print(mesh, '->', refinement_mesh)
-                    #print(refinement_mesh.physical_boundary_1, refinement_mesh.physical_boundary_2)
-                    meshes_tree.add_mesh(refinement_mesh)
-        level += 1
+                    refinements.append(refinement_mesh)
+        meshes_tree.remove_coarse_duplicates()
+        for refinement_mesh in refinements:
+            meshes_tree.add_mesh(refinement_mesh)
     if verbose:
         print('Mesh tree has ', meshes_tree.levels[-1], 'refinement levels')
     return meshes_tree

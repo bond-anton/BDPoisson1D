@@ -27,6 +27,7 @@ def y(x):
     :return: y(x) values of function at x nodes
     """
     return -20 * np.sin(2 * np.pi * x) / (2 * np.pi) + 3 * x ** 2 + x + 5
+    #return -20 * np.sin(2 * np.pi / x**2) / (2 * np.pi) + 3 * x ** 2 + x + 5
 
 
 def dy_numeric(x):
@@ -52,50 +53,26 @@ def f(x):
 
 start = 0.2
 stop = 1.2
+step = 0.1
 
-root_nodes = np.linspace(start, stop, num=101, endpoint=True)  # generate nodes
 bc1 = y(start)  # left Dirichlet boundary condition
 bc2 = y(stop)  # right Dirichlet boundary condition
 
-meshes = dirichlet_poisson_solver_amr(root_nodes, f, bc1, bc2, 5.0e-3, max_level=10, verbose=True)
+meshes = dirichlet_poisson_solver_amr(start, stop, step, f, bc1, bc2, 1.0e-3, max_level=10, verbose=True)
 flat_mesh = meshes.flatten()
-
-nodes = flat_mesh.physical_nodes
 y_solution = flat_mesh.solution
-residual = flat_mesh.residual
-
-dy_solution = np.gradient(y_solution, nodes, edge_order=2)
-d2y_solution = np.gradient(dy_solution, nodes, edge_order=2)
+dy_solution = np.gradient(y_solution, flat_mesh.physical_nodes, edge_order=2)
+d2y_solution = np.gradient(dy_solution, flat_mesh.physical_nodes, edge_order=2)
 
 # Plot the result
-colors = ['b', 'g', 'y', 'k', 'm', 'c', 'b', 'g', 'y', 'k', 'm', 'c', 'b', 'g', 'y',
-          'k', 'm', 'c', 'b', 'g', 'y', 'k', 'm', 'c']
-
-fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, sharex=True)
-ax1.plot(nodes, f(nodes), 'r-', label='f(x)')
-ax1.plot(nodes, d2y_solution, 'b-', label='d2y/dx2 (solution)')
-ax2.plot(nodes, dy_numeric(nodes), 'r-', label='dy/dx')
-ax2.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
-ax3.plot(nodes, y_solution, 'b-', label='solution')
-ax3.plot(nodes, y(nodes), 'r-', label='y(x)')
-ax4.plot(nodes, residual, 'g-o', label='residual')
-
-'''
-for level in meshes.levels:
-    for mesh in meshes.tree[level]:
-        dy_solution = np.gradient(mesh.solution, mesh.physical_nodes, edge_order=2)
-        d2y_solution = np.gradient(dy_solution, mesh.physical_nodes, edge_order=2)
-        ax1.plot(mesh.physical_nodes, d2y_solution, colors[level] + '-')
-        ax2.plot(mesh.physical_nodes, dy_solution, colors[level] + '-o')
-        ax3.plot(mesh.physical_nodes, mesh.solution, colors[level] + '-')
-        ax4.plot(mesh.physical_nodes, mesh.residual, colors[level] + '-')
-'''
-ax1.legend()
-ax2.legend()
-ax3.legend()
-ax4.legend()
-
-plot_tree(meshes, ax5)
-
+fig, ax = plt.subplots(nrows=2, ncols=2, sharex=True)
+ax[0][0].plot(flat_mesh.physical_nodes, d2y_solution, 'b-', label='d2y/dx2 (solution)')
+ax[0][0].plot(flat_mesh.physical_nodes, f(flat_mesh.physical_nodes), 'r-', label='f(x)')
+ax[0][1].plot(flat_mesh.physical_nodes, y_solution, 'b-', label='solution')
+ax[0][1].plot(flat_mesh.physical_nodes, y(flat_mesh.physical_nodes), 'r-', label='y(x)')
+ax[1][0].plot(flat_mesh.physical_nodes, flat_mesh.residual, 'g-o', label='residual')
+plot_tree(meshes, ax[1][1])
+ax[0][0].legend()
+ax[0][1].legend()
+ax[1][0].legend()
 plt.show()
-
