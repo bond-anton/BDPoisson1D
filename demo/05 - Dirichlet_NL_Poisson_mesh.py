@@ -25,13 +25,10 @@ bc2 = 0
 
 root_mesh = Mesh1DUniform(0.0, 10.0, bc1, bc2, 0.2)
 
-Meshes = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-
 root_mesh, Psi = dirichlet_non_linear_poisson_solver_recurrent_mesh(root_mesh, Psi, f, dfdDPsi, max_iter=1000,
-                                                                    threshold=1e-6, debug=True)
+                                                                    threshold=1e-6)
 
 mesh_refinement_threshold = 1e-7
-
 idxs = np.where(abs(root_mesh.residual) > mesh_refinement_threshold)
 
 dPsi = np.gradient(root_mesh.solution, root_mesh.physical_nodes, edge_order=2)

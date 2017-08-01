@@ -29,8 +29,10 @@ def plot_tree(mesh_tree, axes=None):
 Nd = lambda x: np.ones_like(x)
 kT = 1/40
 
+
 def f(x, Psi):    
     return 2*(1 - (np.exp(-Psi(x)/kT)))
+
 
 def dfdDPsi(x, Psi):
     return 2/kT * np.exp(-Psi(x)/kT)
@@ -45,7 +47,7 @@ bc2 = 0
 Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdDPsi, bc1, bc2,
                                                  max_iter=1000, residual_threshold=1.5e-3,
                                                  int_residual_threshold=1.5e-4,
-                                                 max_level=20, mesh_refinement_threshold=1e-7, debug=True)
+                                                 max_level=20, mesh_refinement_threshold=1e-7)
 
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 
