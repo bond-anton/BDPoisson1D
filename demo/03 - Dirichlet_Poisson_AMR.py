@@ -27,7 +27,7 @@ def y(x):
     :param x: 1D array of nodes
     :return: y(x) values of function at x nodes
     """
-    return -20 * np.sin(2 * np.pi * x) / (2 * np.pi) + 3 * x ** 2 + x + 5
+    return -20 * np.sin(2 * np.pi * x**2) / (2 * np.pi) + 3 * x ** 2 + x + 5
 
 
 def dy_numeric(x):
@@ -53,8 +53,8 @@ def f(x):
 
 start = 0.2
 stop = 1.2
-step = 0.2
-meshes = dirichlet_poisson_solver_amr(start, stop, step, f, y(start), y(stop), 1.0e-2, max_level=10)
+step = 0.01
+meshes = dirichlet_poisson_solver_amr(start, stop, step, f, y(start), y(stop), 1.0e-2, max_level=15)
 flat_mesh = meshes.flatten()
 dy_solution = np.gradient(flat_mesh.solution, flat_mesh.physical_nodes, edge_order=2)
 d2y_solution = np.gradient(dy_solution, flat_mesh.physical_nodes, edge_order=2)
