@@ -52,7 +52,7 @@ setup(
     keywords='FiniteDifference PDE Poisson',
 
     packages=find_packages(exclude=['demo', 'tests', 'docs', 'contrib']),
-    install_requires=['numpy', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.1.0'],
+    install_requires=['numpy', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.1.1'],
     dependency_links=['https://github.com/bond-anton/BDMesh/tarball/master#egg=BDMesh-0.1.1'],
     test_suite='nose.collector',
     tests_require=['nose']
