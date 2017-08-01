@@ -106,7 +106,7 @@ def dirichlet_poisson_solver_amr(boundary_1, boundary_2, step, f, bc1, bc2,
                               boundary_condition_1=bc1,
                               boundary_condition_2=bc2,
                               physical_step=round(step, 9))
-    meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=False)
+    meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
     while True:
         level = meshes_tree.levels[-1]
         converged = np.zeros(len(meshes_tree.tree[level]))

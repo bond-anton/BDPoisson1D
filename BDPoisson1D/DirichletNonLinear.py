@@ -202,50 +202,45 @@ def dirichlet_non_linear_poisson_solver_amr(boundary_1, boundary_2, step, y0, f,
         :param debug: if set to True outputs debug messages to stdout
         :return: meshes tree with solution and residual.
         """
-    root_mesh = Mesh1DUniform(boundary_1, boundary_2, step, bc1, bc2)
-    meshes = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-    converged = np.zeros(1)
-    level = 0
-    while (not converged.all() or level < meshes.levels[-1]) and level <= max_level:
-        if debug:
-            print('Solving for Meshes of level:', level, 'of', meshes.levels[-1])
-        converged = np.zeros(len(meshes.tree[level]))
-        for mesh_id, mesh in enumerate(meshes.tree[level]):
+    root_mesh = Mesh1DUniform(boundary_1, boundary_2,
+                              boundary_condition_1=bc1,
+                              boundary_condition_2=bc2,
+                              physical_step=round(step, 9))
+    meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
+    while True:
+        level = meshes_tree.levels[-1]
+        converged = np.zeros(len(meshes_tree.tree[level]))
+        refinements = []
+        for mesh_id, mesh in enumerate(meshes_tree.tree[level]):
             mesh, y0 = dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh, y0, f, df_ddy,
                                                                           max_iter, int_residual_threshold,
                                                                           debug=debug)
             mesh.trim()
-            if max(abs(mesh.residual)) < residual_threshold:
-                if debug:
-                    print('CONVERGED!')
-                converged[mesh_id] = True
+            converged[mesh_id] = max(abs(mesh.residual)) < residual_threshold
+            if converged[mesh_id]:
                 continue
             refinement_points_chunks = points_for_refinement(mesh, mesh_refinement_threshold)
-            if len(refinement_points_chunks) == 0 or np.all(
-                    np.array([block.size == 0 for block in refinement_points_chunks])):
-                if debug:
-                    print('CONVERGED!')
-                converged[mesh_id] = True
+            converged[mesh_id] = np.all(np.array([block.size == 0 for block in refinement_points_chunks]))
+            if converged[mesh_id]:
                 continue
-            if level < max_level:
-                if debug:
-                    print('nodes for refinement:', refinement_points_chunks)
+            elif level < max_level:
                 for block in refinement_points_chunks:
-                    idx1, idx2, crop = adjust_range(block, mesh.num - 1, crop=[3, 3], step_scale=2)
-                    start_point = mesh.to_physical_coordinate(mesh.local_nodes[idx1])
-                    stop_point = mesh.to_physical_coordinate(mesh.local_nodes[idx2])
-                    ref_bc1 = mesh.solution[idx1]
-                    ref_bc2 = mesh.solution[idx2]
-                    print(start_point, stop_point)
-                    print(ref_bc1, ref_bc2)
-                    refinement_mesh = Mesh1DUniform(start_point, stop_point,
-                                                    mesh.physical_step / meshes.refinement_coefficient,
-                                                    ref_bc1, ref_bc2,
-                                                    crop=crop)
-                    meshes.add_mesh(refinement_mesh)
-                    flat_grid, _, _ = meshes.flatten()
-                    y0 = interp1d(flat_grid, y0(flat_grid), kind='cubic')
-        level += 1
+                    idx1, idx2, mesh_crop = adjust_range(block, mesh.num - 1, crop=[10, 10],
+                                                         step_scale=meshes_tree.refinement_coefficient)
+                    refinements.append(Mesh1DUniform(
+                        mesh.to_physical_coordinate(mesh.local_nodes[idx1]),
+                        mesh.to_physical_coordinate(mesh.local_nodes[idx2]),
+                        boundary_condition_1=mesh.solution[idx1],
+                        boundary_condition_2=mesh.solution[idx2],
+                        physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
+                        crop=mesh_crop))
+        meshes_tree.remove_coarse_duplicates()
+        if converged.all() or level == max_level:
+            break
+        for refinement_mesh in refinements:
+            meshes_tree.add_mesh(refinement_mesh)
+        flat_grid, _, _ = meshes_tree.flatten()
+        y0 = interp1d(flat_grid, y0(flat_grid), kind='cubic')
     if debug:
-        print('Mesh tree has ', meshes.levels[-1], 'refinement levels')
-    return meshes
+        print('Mesh tree has ', meshes_tree.levels[-1], 'refinement levels')
+    return meshes_tree
