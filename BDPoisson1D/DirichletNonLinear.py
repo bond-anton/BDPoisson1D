@@ -6,7 +6,6 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy import sparse
 from scipy.sparse import linalg
-from matplotlib import pyplot as plt
 
 from BDMesh import Mesh1DUniform, TreeMesh1DUniform
 from ._helpers import fd_d2_matrix, interp_fn, adjust_range, points_for_refinement
@@ -29,9 +28,9 @@ def dirichlet_non_linear_poisson_solver_arrays(nodes, y0_nodes, f_nodes, df_ddy_
     :param bc2: boundary condition at nodes[n] point (a number).
     :param j: Jacobian.
     :param rel: if True the residual is returned relative to f_nodes.
-    :param w: the weight for Dy (default w=1.0)
-    :param debug: if set to True outputs debug messages to stdout
-    :return: solution y = y0 + w * Dy; Dy; residual
+    :param w: the weight for Dy (default w=1.0).
+    :param debug: if set to True outputs debug messages to stdout.
+    :return: solution y = y0 + w * Dy; Dy; residual.
     """
     t0 = time.time()
     step = nodes[1:-1] - nodes[:-2]  # grid step
@@ -81,9 +80,9 @@ def dirichlet_non_linear_poisson_solver(nodes, y0, f, df_ddy, bc1, bc2, j=1, rel
     :param bc2: boundary condition at nodes[n] point (a number).
     :param j: Jacobian.
     :param rel: if True the residual is returned relative to f_nodes.
-    :param w: the weight for Dy (default w=1.0)
-    :param debug: if set to True outputs debug messages to stdout
-    :return: solution as callable function y = y0 + w * Dy; Dy; residual
+    :param w: the weight for Dy (default w=1.0).
+    :param debug: if set to True outputs debug messages to stdout.
+    :return: solution as callable function y = y0 + w * Dy; Dy; residual.
     """
     y0_nodes = y0(nodes)
     f_nodes = f(nodes, y0)
@@ -110,7 +109,7 @@ def dirichlet_non_linear_poisson_solver_mesh_arrays(mesh, y0_nodes, f_nodes, df_
     :param rel: if True the residual is returned relative to f_nodes.
     :param w: the weight for Dy (default w=1.0)
     :param debug: if set to True outputs debug messages to stdout
-    :return: mesh with solution y = y0 + w * Dy, and residual; Dy;
+    :return: mesh with solution y = y0 + w * Dy, and residual; Dy.
     """
     y_nodes, dy, residual = dirichlet_non_linear_poisson_solver_arrays(mesh.local_nodes, y0_nodes, f_nodes,
                                                                        df_ddy_nodes,
@@ -135,7 +134,7 @@ def dirichlet_non_linear_poisson_solver_mesh(mesh, y0, f, df_ddy, rel=False, w=1
     :param rel: if True the residual is returned relative to f_nodes.
     :param w: the weight for Dy (default w=1.0)
     :param debug: if set to True outputs debug messages to stdout
-    :return: mesh with solution y = y0 + w * Dy, and residual; Dy;
+    :return: mesh with solution y = y0 + w * Dy, and residual; callable solution function; Dy.
     """
     y0_nodes = y0(mesh.phys_nodes)
     f_nodes = f(mesh.phys_nodes, y0)
@@ -162,7 +161,7 @@ def dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh, y0, f, df_ddy, max_
     :param max_iter: maximal number of allowed iterations.
     :param threshold: convergence residual error threshold.
     :param debug: if set to True outputs debug messages to stdout
-    :return: mesh with solution y = y0 + w * Dy, and residual; Dy;
+    :return: mesh with solution y = y0 + w * Dy, and residual; callable solution function.
     """
     for i in range(max_iter):
         if debug:
@@ -170,30 +169,51 @@ def dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh, y0, f, df_ddy, max_
         mesh, y0, dy = dirichlet_non_linear_poisson_solver_mesh(mesh, y0, f, df_ddy, debug=False)
         if debug:
             print('Integrated residual:', mesh.int_residual)
-        if abs(mesh.integrational_residual) <= threshold or np.max(abs(dy)) <= 2 * np.finfo(np.float).eps:
+        if abs(mesh.integrational_residual) <= threshold or np.max(np.abs(dy)) <= 2 * np.finfo(np.float).eps:
             break
     return mesh, y0
 
 
-def dirichlet_non_linear_poisson_solver_amr(nodes, Psi, f, dfdDPsi, bc1, bc2,
-                                            max_iterations=1000, residual_threshold=1e-3, int_residual_threshold=1e-6,
+def dirichlet_non_linear_poisson_solver_amr(boundary_1, boundary_2, step, y0, f, df_ddy, bc1, bc2,
+                                            max_iter=1000, residual_threshold=1e-3, int_residual_threshold=1e-6,
                                             max_level=20, mesh_refinement_threshold=1e-7, debug=False):
-    '''
-    The recurrent NL Poisson solver with the Adaptive Mesh Refinement
-    nodes is the initial physical mesh
-    '''
-    root_mesh = MeshUniform1D(nodes[0], nodes[-1], nodes[1] - nodes[0], bc1, bc2)
-    Meshes = TreeMeshUniform1D(root_mesh, refinement_coefficient=2, aligned=True)
+    """
+        Solves 1D differential equation of the form
+            d2y/dx2 = f(x, y(x))
+            y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
+        using FDE algorithm of O(h2) precision and Tailor series for linearization.
+            y = y0 + Dy
+            f(x, y(x)) ~= f(x, y0) + df/dDy(x, y0)*Dy
+        Recurrent successive approximation of y0 and adaptive mesh refinement
+        algorithms are used to achieve given residual error threshold value.
+        :param boundary_1: physical nodes left boundary.
+        :param boundary_2: physical nodes right boundary.
+        :param step: physical nodes step.
+        :param y0: callable of y(x) initial approximation.
+        :param f: callable of f(x) to be evaluated on nodes array.
+        :param df_ddy: callable for evaluation of df/dDy, where Dy is delta y for y0 correction.
+        :param bc1: boundary condition at nodes[0] point (a number).
+        :param bc2: boundary condition at nodes[n] point (a number).
+        :param max_iter: maximal number of allowed iterations.
+        :param residual_threshold: convergence residual error threshold.
+        :param int_residual_threshold: convergence integrational residual error threshold.
+        :param max_level: maximal level of allowed mesh refinement.
+        :param mesh_refinement_threshold: convergence residual error threshold for mesh refinement.
+        :param debug: if set to True outputs debug messages to stdout
+        :return: meshes tree with solution and residual.
+        """
+    root_mesh = Mesh1DUniform(boundary_1, boundary_2, step, bc1, bc2)
+    meshes = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
     converged = np.zeros(1)
     level = 0
-    while (not converged.all() or level < Meshes.levels[-1]) and level <= max_level:
+    while (not converged.all() or level < meshes.levels[-1]) and level <= max_level:
         if debug:
-            print('Solving for Meshes of level:', level, 'of', Meshes.levels[-1])
-        converged = np.zeros(len(Meshes.tree[level]))
-        for mesh_id, mesh in enumerate(Meshes.tree[level]):
-            mesh, Psi = dirichlet_non_linear_poisson_solver_reccurent_mesh(mesh, Psi, f, dfdDPsi,
-                                                                           max_iterations, int_residual_threshold,
-                                                                           debug=debug)
+            print('Solving for Meshes of level:', level, 'of', meshes.levels[-1])
+        converged = np.zeros(len(meshes.tree[level]))
+        for mesh_id, mesh in enumerate(meshes.tree[level]):
+            mesh, y0 = dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh, y0, f, df_ddy,
+                                                                          max_iter, int_residual_threshold,
+                                                                          debug=debug)
             mesh.trim()
             if max(abs(mesh.residual)) < residual_threshold:
                 if debug:
@@ -218,21 +238,14 @@ def dirichlet_non_linear_poisson_solver_amr(nodes, Psi, f, dfdDPsi, bc1, bc2,
                     ref_bc2 = mesh.solution[idx2]
                     print(start_point, stop_point)
                     print(ref_bc1, ref_bc2)
-                    refinement_mesh = MeshUniform1D(start_point, stop_point,
-                                                    mesh.physical_step / Meshes.refinement_coefficient,
+                    refinement_mesh = Mesh1DUniform(start_point, stop_point,
+                                                    mesh.physical_step / meshes.refinement_coefficient,
                                                     ref_bc1, ref_bc2,
                                                     crop=crop)
-                    # print 'CROP:', crop
-                    Meshes.add_mesh(refinement_mesh)
-                    flat_grid, _, _ = Meshes.flatten()
-                    Psi = interp1d(flat_grid, Psi(flat_grid), kind='cubic')
-                    if debug:
-                        _, ax = plt.subplots(1)
-                        ax.plot(mesh.physical_nodes, mesh.solution, 'b-o')
-                        ax.plot(refinement_mesh.physical_nodes, Psi(refinement_mesh.physical_nodes), 'r-o')
-                        plt.show()
-                if debug:
-                    Meshes.plot_tree()
+                    meshes.add_mesh(refinement_mesh)
+                    flat_grid, _, _ = meshes.flatten()
+                    y0 = interp1d(flat_grid, y0(flat_grid), kind='cubic')
         level += 1
-    if debug: print('Mesh tree has ', Meshes.levels[-1], 'refinement levels')
-    return Meshes
+    if debug:
+        print('Mesh tree has ', meshes.levels[-1], 'refinement levels')
+    return meshes
