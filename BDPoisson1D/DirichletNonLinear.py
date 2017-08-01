@@ -113,7 +113,9 @@ def dirichlet_non_linear_poisson_solver_mesh_arrays(mesh, y0_nodes, f_nodes, df_
     """
     y_nodes, dy, residual = dirichlet_non_linear_poisson_solver_arrays(mesh.local_nodes, y0_nodes, f_nodes,
                                                                        df_ddy_nodes,
-                                                                       mesh.bc1, mesh.bc2, mesh.j, rel, w, debug)
+                                                                       mesh.boundary_condition_1,
+                                                                       mesh.boundary_condition_2,
+                                                                       mesh.jacobian, rel, w, debug)
     mesh.solution = y_nodes
     mesh.residual = residual
     return mesh, dy
@@ -136,12 +138,12 @@ def dirichlet_non_linear_poisson_solver_mesh(mesh, y0, f, df_ddy, rel=False, w=1
     :param debug: if set to True outputs debug messages to stdout
     :return: mesh with solution y = y0 + w * Dy, and residual; callable solution function; Dy.
     """
-    y0_nodes = y0(mesh.phys_nodes)
-    f_nodes = f(mesh.phys_nodes, y0)
-    df_ddy_nodes = df_ddy(mesh.phys_nodes, y0)
+    y0_nodes = y0(mesh.physical_nodes)
+    f_nodes = f(mesh.physical_nodes, y0)
+    df_ddy_nodes = df_ddy(mesh.physical_nodes, y0)
     mesh, dy = dirichlet_non_linear_poisson_solver_mesh_arrays(mesh, y0_nodes, f_nodes, df_ddy_nodes,
                                                                rel, w, debug)
-    y = interp_fn(mesh.phys_nodes, mesh.solution)
+    y = interp_fn(mesh.physical_nodes, mesh.solution)
     return mesh, y, dy
 
 
@@ -168,7 +170,7 @@ def dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh, y0, f, df_ddy, max_
             print('Iteration:', i + 1)
         mesh, y0, dy = dirichlet_non_linear_poisson_solver_mesh(mesh, y0, f, df_ddy, debug=False)
         if debug:
-            print('Integrated residual:', mesh.int_residual)
+            print('Integrated residual:', mesh.integrational_residual)
         if abs(mesh.integrational_residual) <= threshold or np.max(np.abs(dy)) <= 2 * np.finfo(np.float).eps:
             break
     return mesh, y0
@@ -239,8 +241,8 @@ def dirichlet_non_linear_poisson_solver_amr(boundary_1, boundary_2, step, y0, f,
             break
         for refinement_mesh in refinements:
             meshes_tree.add_mesh(refinement_mesh)
-        flat_grid, _, _ = meshes_tree.flatten()
-        y0 = interp1d(flat_grid, y0(flat_grid), kind='cubic')
+        #flat_grid = meshes_tree.flatten()
+        #y0 = interp1d(flat_grid.physical_nodes, y0(flat_grid.physical_nodes), kind='cubic')
     if debug:
         print('Mesh tree has ', meshes_tree.levels[-1], 'refinement levels')
     return meshes_tree

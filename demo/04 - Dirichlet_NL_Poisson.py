@@ -1,4 +1,5 @@
 from __future__ import division, print_function
+import time
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -18,7 +19,7 @@ def dfdDPsi(x, Psi):
 
 Psi = lambda x: np.exp(-x * 3)
 
-nodes = np.linspace(0., 4., num=51, endpoint=True, dtype=np.float)
+nodes = np.linspace(0., 4., num=21, endpoint=True, dtype=np.float)
 bc1 = 1
 bc2 = 0
 
@@ -26,7 +27,6 @@ print(nodes, nodes.size, nodes.dtype)
 
 DPsi = np.zeros_like(nodes)
 E = np.zeros_like(nodes)
-plt.ion()
 _, (ax1, ax2, ax3, ax4) = plt.subplots(4)
 ax1.set_autoscaley_on(True)
 ax2.set_autoscaley_on(True)
@@ -48,10 +48,10 @@ d2Psi_line, = ax3.plot(nodes, d2Psi)
 plt.draw()
 
 
-for i in range(1000):
+for i in range(100):
     print(i + 1)
-    # time.sleep(0.1)
-    Psi, DPsi, R = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdDPsi, bc1=1, bc2=0, J=1, debug=False)
+    time.sleep(0.1)
+    Psi, DPsi, R = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdDPsi, bc1=1, bc2=0, j=1, debug=False)
     dPsi = np.gradient(Psi(nodes), nodes, edge_order=2)
     d2Psi = np.gradient(dPsi, nodes, edge_order=2)
     Psi_line.set_ydata(Psi(nodes))
