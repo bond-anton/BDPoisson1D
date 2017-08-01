@@ -1,5 +1,5 @@
 from __future__ import division, print_function
-
+import warnings
 import numpy as np
 from scipy.sparse import linalg
 
@@ -25,10 +25,7 @@ def neumann_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, y0=0):
     """
     integral = np.trapz(f_nodes, nodes)
     if abs(integral - bc2 + bc1) > 1e-4:
-        print('WARNING!!!!')
-        print('The problem is not well-posed!')
-        print('Redefine the f function and BCs or refine the mesh!')
-        print('WARNING!!!!')
+        warnings.warn('Not well-posed! Redefine f function and boundary conditions or refine the mesh!')
     step = nodes[1:] - nodes[:-1]  # grid step
     m = fd_d2_matrix(nodes.size - 1)
     m[0, 0] = 0
