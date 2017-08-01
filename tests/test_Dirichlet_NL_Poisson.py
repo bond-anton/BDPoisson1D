@@ -35,17 +35,39 @@ class TestDirichletNL(unittest.TestCase):
         R_1 = R_2 = 0
         for i in range(100):
             Psi_nodes, _, R_1 = dirichlet_non_linear_poisson_solver_arrays(nodes, Psi(nodes),
-                                                                         self.f(nodes, Psi), self.dfdDPsi(nodes, Psi),
-                                                                         bc1=1, bc2=0, j=1, w=1)
+                                                                           self.f(nodes, Psi), self.dfdDPsi(nodes, Psi),
+                                                                           bc1=1, bc2=0, j=1, w=1, rel=False)
             Psi = interp_fn(nodes, Psi_nodes)
         nodes = np.linspace(start, stop, num=101, endpoint=True, dtype=np.float)
         Psi = lambda x: np.exp(-x * 3)
         for i in range(100):
             Psi_nodes, _, R_2 = dirichlet_non_linear_poisson_solver_arrays(nodes, Psi(nodes),
-                                                                         self.f(nodes, Psi), self.dfdDPsi(nodes, Psi),
-                                                                         bc1=1, bc2=0, j=1, w=1)
+                                                                           self.f(nodes, Psi), self.dfdDPsi(nodes, Psi),
+                                                                           bc1=1, bc2=0, j=1, w=1, rel=False)
             Psi = interp_fn(nodes, Psi_nodes)
         self.assertTrue(max(abs(R_2)) < max(abs(R_1)))
+        nodes = np.linspace(start, stop, num=51, endpoint=True, dtype=np.float)
+        Psi = lambda x: np.exp(-x * 3)
+        R_1 = R_2 = 0
+        for i in range(100):
+            Psi_nodes, _, R_1 = dirichlet_non_linear_poisson_solver_arrays(nodes, Psi(nodes),
+                                                                           self.f(nodes, Psi), self.dfdDPsi(nodes, Psi),
+                                                                           bc1=1, bc2=0, j=1, w=1, rel=True)
+            Psi = interp_fn(nodes, Psi_nodes)
+        nodes = np.linspace(start, stop, num=101, endpoint=True, dtype=np.float)
+        Psi = lambda x: np.exp(-x * 3)
+        for i in range(100):
+            Psi_nodes, _, R_2 = dirichlet_non_linear_poisson_solver_arrays(nodes, Psi(nodes),
+                                                                           self.f(nodes, Psi), self.dfdDPsi(nodes, Psi),
+                                                                           bc1=1, bc2=0, j=1, w=1, rel=True)
+            Psi = interp_fn(nodes, Psi_nodes)
+        self.assertTrue(max(abs(R_2)) < max(abs(R_1)))
+        nodes = np.linspace(start, stop, num=101, endpoint=True, dtype=np.float)
+        Psi = lambda x: np.exp(-x * 3)
+        with self.assertRaises(ZeroDivisionError):
+            _, _, r = dirichlet_non_linear_poisson_solver_arrays(nodes, Psi(nodes),
+                                                                 np.zeros(len(nodes)), self.dfdDPsi(nodes, Psi),
+                                                                 bc1=1, bc2=0, j=1, w=1, rel=True)
 
     def test_dirichlet_poisson_solver(self):
         start = 0.0

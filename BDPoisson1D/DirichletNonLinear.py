@@ -43,10 +43,10 @@ def dirichlet_non_linear_poisson_solver_arrays(nodes, y0_nodes, f_nodes, df_ddy_
     d2_dy = np.gradient(d_dy, nodes, edge_order=2) / j
     residual = f_nodes - d2_dy - d2_y0
     if rel:
-        try:
+        if np.allclose(np.max(abs(f_nodes)), 0.0):
+            raise ZeroDivisionError('Try to set parameter rel to False')
+        else:
             residual /= np.max(abs(f_nodes))
-        except FloatingPointError:
-            raise FloatingPointError()
     return y, dy, residual
 
 
