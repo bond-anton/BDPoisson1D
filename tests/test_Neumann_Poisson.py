@@ -74,6 +74,7 @@ class TestNeumann(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
             _, residual_1 = neumann_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, y0=self.y(start)[0])
+            print(w, len(w))
             self.assertTrue(len(w) == 1)
             self.assertTrue(issubclass(w[-1].category, UserWarning))
             self.assertTrue('Not well-posed' in str(w[-1].message))
