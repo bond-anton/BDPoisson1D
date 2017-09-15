@@ -70,9 +70,9 @@ class TestNeumann(unittest.TestCase):
         _, residual_2 = neumann_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, y0=self.y(start)[0])
         self.assertTrue(max(abs(residual_2)) < max(abs(residual_1)))
         bc1 = self.dy_numeric(nodes)[0]
-        bc2 = self.dy_numeric(nodes)[-1] + 0.2
+        bc2 = self.dy_numeric(nodes)[-1] + 0.5
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter('always')
+            warnings.simplefilter('default')
             _, residual_1 = neumann_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, y0=self.y(start)[0])
             print(w, len(w))
             self.assertTrue(len(w) == 1)
