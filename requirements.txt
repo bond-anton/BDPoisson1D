@@ -1,4 +1,5 @@
 numpy
 scipy
+Cython
 matplotlib
 BDMesh

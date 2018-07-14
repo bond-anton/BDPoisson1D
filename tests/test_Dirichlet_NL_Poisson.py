@@ -89,8 +89,7 @@ class TestDirichletNL(unittest.TestCase):
         start = 0.0
         stop = 4.0
         step = 0.5
-        mesh_1 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0,
-                               physical_step=step, crop=None)
+        mesh_1 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = lambda x: np.exp(-x * 3)
         for i in range(100):
             mesh_1, _ = dirichlet_non_linear_poisson_solver_mesh_arrays(mesh_1, Psi(mesh_1.physical_nodes),
@@ -98,8 +97,7 @@ class TestDirichletNL(unittest.TestCase):
                                                                         self.dfdDPsi(mesh_1.physical_nodes, Psi), w=1)
             Psi = interp_fn(mesh_1.physical_nodes, mesh_1.solution)
         step = 0.1
-        mesh_2 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0,
-                               physical_step=step, crop=None)
+        mesh_2 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = lambda x: np.exp(-x * 3)
         for i in range(100):
             mesh_2, _ = dirichlet_non_linear_poisson_solver_mesh_arrays(mesh_2, Psi(mesh_2.physical_nodes),
@@ -112,14 +110,12 @@ class TestDirichletNL(unittest.TestCase):
         start = 0.0
         stop = 4.0
         step = 0.5
-        mesh_1 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0,
-                               physical_step=step, crop=None)
+        mesh_1 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = lambda x: np.exp(-x * 3)
         for i in range(100):
             mesh_1, Psi, _ = dirichlet_non_linear_poisson_solver_mesh(mesh_1, Psi, self.f, self.dfdDPsi, w=1)
         step = 0.1
-        mesh_2 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0,
-                               physical_step=step, crop=None)
+        mesh_2 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = lambda x: np.exp(-x * 3)
         for i in range(100):
             mesh_2, Psi, _ = dirichlet_non_linear_poisson_solver_mesh(mesh_2, Psi, self.f, self.dfdDPsi, w=1)
@@ -131,8 +127,7 @@ class TestDirichletNL(unittest.TestCase):
         step = 0.5
         threshold = 1e-6
         max_iter = 1000
-        mesh_1 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0,
-                               physical_step=step, crop=None)
+        mesh_1 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = lambda x: np.exp(-x * 3)
         mesh_1, Psi = dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh_1, Psi, self.f, self.dfdDPsi,
                                                                          max_iter=max_iter, threshold=threshold)

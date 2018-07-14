@@ -55,7 +55,7 @@ class TestHelpers(unittest.TestCase):
         threshold = 0.5
         indices = points_for_refinement(mesh, threshold=threshold)
         np.testing.assert_equal(indices[0], np.array([]))
-        mesh.residual = [0.6, 0, 0, 0.6, 0.6, 0.5, 0, 0, 0.6, 0.6, 0.6]
+        mesh.residual = np.array([0.6, 0, 0, 0.6, 0.6, 0.5, 0, 0, 0.6, 0.6, 0.6])
         indices = points_for_refinement(mesh, threshold=threshold)
         np.testing.assert_equal(indices[0], np.array([0]))
         np.testing.assert_equal(indices[1], np.array([3, 4]))
