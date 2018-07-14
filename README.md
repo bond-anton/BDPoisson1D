@@ -9,6 +9,10 @@ One dimensional finite difference Poisson equation solver.
 
 To install run
 ```shell
+pip install BDPoisson1D
+```
+or
+```shell
 python setup.py install
 ```
 ## Usage
