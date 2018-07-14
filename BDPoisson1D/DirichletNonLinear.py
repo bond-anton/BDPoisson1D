@@ -204,8 +204,8 @@ def dirichlet_non_linear_poisson_solver_amr(boundary_1, boundary_2, step, y0, f,
                     idx1, idx2, mesh_crop = adjust_range(block, mesh.num - 1, crop=[10, 10],
                                                          step_scale=meshes_tree.refinement_coefficient)
                     refinements.append(Mesh1DUniform(
-                        mesh.to_physical_coordinate(mesh.local_nodes[idx1]),
-                        mesh.to_physical_coordinate(mesh.local_nodes[idx2]),
+                        mesh.to_physical_coordinate(np.array([mesh.local_nodes[idx1]])),
+                        mesh.to_physical_coordinate(np.array([mesh.local_nodes[idx2]])),
                         boundary_condition_1=mesh.solution[idx1],
                         boundary_condition_2=mesh.solution[idx2],
                         physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,

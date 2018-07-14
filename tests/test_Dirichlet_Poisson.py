@@ -70,21 +70,21 @@ class TestDirichlet(unittest.TestCase):
         stop = 2.0
         mesh_1 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y(start)[0], boundary_condition_2=self.y(stop)[0],
-                               physical_step=0.02, crop=None)
+                               physical_step=0.02)
         mesh_1 = dirichlet_poisson_solver_mesh_arrays(mesh_1, self.d2y_numeric(mesh_1.physical_nodes))
         mesh_2 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y(start)[0], boundary_condition_2=self.y(stop)[0],
-                               physical_step=0.01, crop=None)
+                               physical_step=0.01)
         mesh_2 = dirichlet_poisson_solver_mesh_arrays(mesh_2, self.d2y_numeric(mesh_2.physical_nodes))
         self.assertTrue(max(abs(mesh_2.residual)) < max(abs(mesh_1.residual)))
 
         mesh_1 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y(start)[0], boundary_condition_2=self.y(stop)[0],
-                               physical_step=0.02, crop=None)
+                               physical_step=0.02)
         mesh_1 = dirichlet_poisson_solver_mesh(mesh_1, self.d2y_numeric)
         mesh_2 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y(start)[0], boundary_condition_2=self.y(stop)[0],
-                               physical_step=0.01, crop=None)
+                               physical_step=0.01)
         mesh_2 = dirichlet_poisson_solver_mesh(mesh_2, self.d2y_numeric)
         self.assertTrue(max(abs(mesh_2.residual)) < max(abs(mesh_1.residual)))
 
