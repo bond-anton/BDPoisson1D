@@ -1,22 +1,38 @@
 from __future__ import division, print_function
-import math as m
 import numpy as np
-from scipy import sparse
+from scipy.sparse import dia_matrix
 from scipy.interpolate import interp1d
 
 from BDMesh import Mesh1DUniform
 
+from libc.math cimport floor, ceil
+from cython cimport boundscheck, wraparound
 
-def fd_d2_matrix(size):
+
+cdef double trapz_1d(double[:] y, double[:] x):
+    cdef:
+        int nx = x.shape[0], ny = y.shape[0], i
+        double res = 0.0
+    if nx == ny:
+        with boundscheck(False), wraparound(False):
+            for i in range(nx - 1):
+                res += (x[i + 1] - x[i]) * (y[i + 1] + y[i]) / 2
+        return res
+    else:
+        raise ValueError('x and y must be the same size')
+
+
+cpdef fd_d2_matrix(int size):
     """
     d2 finite difference matrix generator
     :param size: size of matrix to generate (int)
     :return: d2 finite difference sparse matrix of three diagonals of O(h2) precision.
     """
+    cdef:
+        double[:] a, b
     a = -2 * np.ones(size)
-    b = np.ones(size - 1)
-    c = np.ones(size - 1)
-    return sparse.diags([c, a, b], offsets=[-1, 0, 1], shape=(size, size), format='csc')
+    b = np.ones(size)
+    return dia_matrix(([b, a, b], [-1, 0, 1]), (size, size), dtype=np.float)
 
 
 def interp_fn(x, y, extrapolation='linear'):
@@ -35,11 +51,10 @@ def interp_fn(x, y, extrapolation='linear'):
         fill_value = 0.0
     else:
         fill_value = np.nan
-    f = interp1d(x, y, bounds_error=False, fill_value=fill_value)
-    return f
+    return interp1d(x, y, bounds_error=False, fill_value=fill_value)
 
 
-def points_for_refinement(mesh, threshold):
+def points_for_refinement(mesh, float threshold):
     """
     returns sorted arrays of mesh nodes indices, which require refinement
     :param mesh: mesh of type BDMesh.Mesh1DUniform
@@ -47,14 +62,13 @@ def points_for_refinement(mesh, threshold):
     :return: arrays of bad nodes indices for refinement
     """
     assert isinstance(mesh, Mesh1DUniform)
-    assert isinstance(threshold, (float, int))
     bad_nodes = np.sort(np.where(abs(mesh.residual) > threshold)[0])
     split_idx = np.where(bad_nodes[1:] - bad_nodes[:-1] > 1)[0] + 1
     bad_nodes = np.split(bad_nodes, split_idx)
     return bad_nodes
 
 
-def adjust_range(idx_range, max_index, crop=None, step_scale=1):
+cpdef adjust_range(long[:] idx_range, int max_index, crop=(0, 0), int step_scale=1):
     """
     Calculates start and stop indices for refinement mesh generation given a range of indices
     :param idx_range: 1D array of sorted indices of nodes to build refinement mesh on
@@ -63,14 +77,14 @@ def adjust_range(idx_range, max_index, crop=None, step_scale=1):
     :param step_scale: step scale coefficient between original and generated meshes
     :return: a pair of indices and a crop tuple for refinement mesh constructor
     """
-    if crop is None:
-        crop = [0, 0]
+    cdef:
+        int idx1, idx2
+        int[2] mesh_crop = [0, 0]
     idx1 = max(idx_range[0], 0)
     idx2 = min(idx_range[-1], max_index)
-    mesh_crop = [0, 0]
     if idx2 - idx1 < 2:
         if idx2 == max_index and idx1 == 0:
-            raise ValueError('the range is too short!')
+            return idx1, idx2, mesh_crop
         if idx1 == 0 and idx2 < max_index:
             idx2 += 1
         elif idx2 == max_index and idx1 > 0:
@@ -78,14 +92,14 @@ def adjust_range(idx_range, max_index, crop=None, step_scale=1):
         else:
             idx1 -= 1
             idx2 += 1
-    if (idx1 - m.ceil(crop[0] / step_scale)) >= 0:
-        mesh_crop[0] = int(m.ceil(crop[0] / step_scale) * step_scale)
+    if (idx1 - ceil(crop[0] / step_scale)) >= 0:
+        mesh_crop[0] = int(ceil(crop[0] / step_scale) * step_scale)
     else:
-        mesh_crop[0] = int(m.floor(idx1 * step_scale))
-    idx1 -= int(m.ceil(mesh_crop[0] / step_scale))
-    if (idx2 + m.ceil(crop[1] / step_scale)) <= max_index:
-        mesh_crop[1] = int(m.ceil(crop[1] / step_scale) * step_scale)
+        mesh_crop[0] = int(floor(idx1 * step_scale))
+    idx1 -= int(ceil(mesh_crop[0] / step_scale))
+    if (idx2 + ceil(crop[1] / step_scale)) <= max_index:
+        mesh_crop[1] = int(ceil(crop[1] / step_scale) * step_scale)
     else:
-        mesh_crop[1] = int(m.floor((max_index - idx2) * step_scale))
-    idx2 += int(m.ceil(mesh_crop[1] / step_scale))
+        mesh_crop[1] = int(floor((max_index - idx2) * step_scale))
+    idx2 += int(ceil(mesh_crop[1] / step_scale))
     return idx1, idx2, mesh_crop

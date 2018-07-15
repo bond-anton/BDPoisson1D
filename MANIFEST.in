@@ -1,6 +1,19 @@
+# Include MANIFEST.in
+include MANIFEST.in
+
 # Include the license file
 include LICENSE.txt
 include NOTICE.txt
 
 # Include README
 include README.md
+
+# Include Cython sources
+recursive-include BDPoisson1D *.pyx
+recursive-include BDPoisson1D *.pxd
+
+recursive-exclude build *
+recursive-exclude dist *
+recursive-exclude tools *
+recursive-exclude venv *
+recursive-exclude venv_2.7 *

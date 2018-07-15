@@ -20,8 +20,6 @@ class TestHelpers(unittest.TestCase):
         np.testing.assert_equal(m.todense(), np.array([[-2, 1, 0],
                                                        [1, -2, 1],
                                                        [0, 1, -2]]))
-        with self.assertRaises(TypeError):
-            fd_d2_matrix(3.5)
 
     def test_interp_fn(self):
         x = np.arange(10)
@@ -62,25 +60,22 @@ class TestHelpers(unittest.TestCase):
         np.testing.assert_equal(indices[2], np.array([8, 9, 10]))
         with self.assertRaises(AssertionError):
             points_for_refinement(1, threshold=threshold)
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
             points_for_refinement(mesh, threshold='a')
 
     def test_adjust_range(self):
         idx_range = np.array([0, 1])
-        with self.assertRaises(ValueError):
-            adjust_range(idx_range, max_index=1, crop=None, step_scale=2)
-        idx_range = np.array([0, 1])
-        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, crop=None, step_scale=2)
+        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, step_scale=2)
         self.assertEqual(idx1, 0)
         self.assertEqual(idx2, 2)
         self.assertEqual(mesh_crop, [0, 0])
         idx_range = np.array([9, 10])
-        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, crop=None, step_scale=2)
+        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, step_scale=2)
         self.assertEqual(idx1, 8)
         self.assertEqual(idx2, 10)
         self.assertEqual(mesh_crop, [0, 0])
         idx_range = np.array([4, 5])
-        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, crop=None, step_scale=2)
+        idx1, idx2, mesh_crop = adjust_range(idx_range, max_index=10, step_scale=2)
         self.assertEqual(idx1, 3)
         self.assertEqual(idx2, 6)
         self.assertEqual(mesh_crop, [0, 0])

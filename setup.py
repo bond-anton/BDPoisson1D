@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from Cython.Build import cythonize
 
 from codecs import open
 from os import path
@@ -47,13 +48,14 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 
     keywords='FiniteDifference PDE Poisson',
 
-    packages=find_packages(exclude=['demo', 'tests', 'docs', 'contrib']),
-    install_requires=['numpy', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.1.1'],
-    dependency_links=['https://github.com/bond-anton/BDMesh/tarball/master#egg=BDMesh-0.1.1'],
+    packages=find_packages(exclude=['demo', 'tests', 'docs', 'contrib', 'venv']),
+    ext_modules=cythonize('BDPoisson1D/*.pyx'),
+    install_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.4'],
     test_suite='nose.collector',
     tests_require=['nose']
 )

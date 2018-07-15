@@ -1,12 +1,13 @@
 from __future__ import division, print_function
 import warnings
 import numpy as np
-from scipy.sparse import linalg
+from scipy.sparse import linalg, dia_matrix
 
-from ._helpers import fd_d2_matrix
+from._helpers cimport trapz_1d
 
 
-def neumann_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, y0=0):
+cpdef neumann_poisson_solver_arrays(double[:] nodes, double[:] f_nodes,
+                                    double bc1, double bc2, double j=1.0, double y0=0.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -23,22 +24,28 @@ def neumann_poisson_solver_arrays(nodes, f_nodes, bc1, bc2, j=1, y0=0):
         y: 1D array of solution function y(x) values on nodes array.
         residual: error of the solution.
     """
-    integral = np.trapz(f_nodes, nodes)
+    cdef:
+        double integral
+        double[:] a, b, c, y, f, dy, d2y, residual
+    integral = trapz_1d(f_nodes, nodes)
     if abs(integral - bc2 + bc1) > 1e-4:
         warnings.warn('Not well-posed! Redefine f function and boundary conditions or refine the mesh!')
-    step = nodes[1:] - nodes[:-1]  # grid step
-    m = fd_d2_matrix(nodes.size - 1)
-    m[0, 0] = 0
-    m[-1, -2] = 2
-    y = np.append([y0], np.zeros(nodes.size - 1))  # solution vector
+    step = np.array(nodes[1:]) - np.array(nodes[:-1])  # grid step
+    a = -2 * np.ones(nodes.size - 1)
+    a[0] = 0
+    b = np.ones(nodes.size - 1)
+    c = np.ones(nodes.size - 1)
+    b[-2] = 2
+    m = dia_matrix(([b, a, c], [-1, 0, 1]), (nodes.size - 1, nodes.size - 1), dtype=np.float).tocsr()
     f = (j * step) ** 2 * f_nodes[1:]
     f[0] += step[0] ** 2 * f_nodes[0] + 2 * step[0] * bc1 + y0
     f[-1] -= 2 * step[-1] * bc2
-    y[1:] = linalg.spsolve(m, f, use_umfpack=True)
+    y = linalg.spsolve(m, np.array(f), use_umfpack=True)
+    y = np.append([y0], np.array(y))  # solution vector
     dy = np.gradient(y, nodes, edge_order=2) / j
     d2y = np.gradient(dy, nodes, edge_order=2) / j
-    residual = f_nodes - d2y
-    return y, residual
+    residual = np.array(f_nodes) - np.array(d2y)
+    return np.array(y), np.array(residual)
 
 
 def neumann_poisson_solver(nodes, f, bc1, bc2, j=1, y0=0):
