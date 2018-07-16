@@ -22,8 +22,8 @@ class TestHelpers(unittest.TestCase):
                                                        [0, 1, -2]]))
 
     def test_interp_fn(self):
-        x = np.arange(10)
-        k = 2
+        x = np.arange(10, dtype=np.double)
+        k = 2.0
         y = k * x
         f = interp_fn(x, y, extrapolation='linear')
         self.assertEqual(f(10), 20)

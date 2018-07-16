@@ -60,9 +60,9 @@ class TestDirichlet(unittest.TestCase):
         bc1 = self.y(start)[0]  # left Dirichlet boundary condition
         bc2 = self.y(stop)[0]  # right Dirichlet boundary condition
 
-        _, residual_1 = dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1)
+        _, residual_1 = dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0)
         nodes = np.linspace(start, stop, num=101, endpoint=True)
-        _, residual_2 = dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1)
+        _, residual_2 = dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0)
         self.assertTrue(max(abs(residual_2)) < max(abs(residual_1)))
 
     def test_dirichlet_poisson_solver_mesh(self):

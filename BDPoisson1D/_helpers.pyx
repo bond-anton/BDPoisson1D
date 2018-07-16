@@ -32,10 +32,10 @@ cpdef fd_d2_matrix(int size):
         double[:] a, b
     a = -2 * np.ones(size)
     b = np.ones(size)
-    return dia_matrix(([b, a, b], [-1, 0, 1]), (size, size), dtype=np.float)
+    return dia_matrix(([b, a, b], [-1, 0, 1]), (size, size), dtype=np.float).tocsr()
 
 
-def interp_fn(x, y, extrapolation='linear'):
+cpdef interp_fn(double[:] x, double[:] y, str extrapolation='linear'):
     """
     scipy interp1d wrapper to simplify usage
     :param x: 1D array of x nodes values
@@ -44,17 +44,16 @@ def interp_fn(x, y, extrapolation='linear'):
     :return: function of single argument x which interpolates given input data [x, y]
     """
     if extrapolation == 'linear':
-        fill_value = 'extrapolate'
+        return interp1d(x, y, bounds_error=False, fill_value='extrapolate')
     elif extrapolation == 'last':
-        fill_value = (y[0], y[-1])
+        return interp1d(x, y, bounds_error=False, fill_value=(y[0], y[-1]))
     elif extrapolation == 'zero':
-        fill_value = 0.0
+        return interp1d(x, y, bounds_error=False, fill_value=0.0)
     else:
-        fill_value = np.nan
-    return interp1d(x, y, bounds_error=False, fill_value=fill_value)
+        return interp1d(x, y, bounds_error=False, fill_value=np.nan)
 
 
-def points_for_refinement(mesh, float threshold):
+cpdef points_for_refinement(mesh, float threshold):
     """
     returns sorted arrays of mesh nodes indices, which require refinement
     :param mesh: mesh of type BDMesh.Mesh1DUniform
