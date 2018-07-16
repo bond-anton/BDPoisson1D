@@ -41,7 +41,7 @@ cpdef dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_nodes, double
     return np.array(y), np.array(residual)
 
 
-cpdef dirichlet_poisson_solver(double[:] nodes, f, double bc1, double bc2, double j=1.0):
+cpdef dirichlet_poisson_solver(double[:] nodes, double[:] (*f)(double[:] *), double bc1, double bc2, double j=1.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
