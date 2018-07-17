@@ -3,8 +3,11 @@ from __future__ import division, print_function
 import numpy as np
 from scipy.sparse import linalg
 
+from cython cimport boundscheck, wraparound
+
 from BDMesh import Mesh1DUniform, TreeMesh1DUniform
 from ._helpers cimport fd_d2_matrix, points_for_refinement, adjust_range
+from .Function cimport Function
 
 
 cpdef dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_nodes, double bc1, double bc2, double j=1.0):
@@ -24,24 +27,34 @@ cpdef dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_nodes, double
         residual: error of the solution.
     """
     cdef:
-        double step = nodes[1] - nodes[0]
-        double[:] y, dy, d2y, residual, sol
-        int i
-    #step = np.array(nodes[1:-1]) - np.array(nodes[:-2])  # grid step
-    m = fd_d2_matrix(nodes.size - 2)
-    y = np.array([bc1] + [0] * (nodes.size - 2) + [bc2])  # solution vector
-    f = (j * step) ** 2 * np.array(f_nodes[1:-1]) - np.delete(y, [1, 2])
+        int i, n = nodes.size
+        double[:] dy, d2y, sol
+        double[:] y = np.zeros(n, dtype=np.double)
+        double[:] residual = np.zeros(n, dtype=np.double)
+        double[:] step = np.zeros(n - 2, dtype=np.double)
+        double[:] f = np.zeros(n - 2, dtype=np.double)
+    y[0] = bc1
+    y[-1] = bc2
+    m = fd_d2_matrix(n - 2)
+    with boundscheck(False), wraparound(False):
+        for i in range(n - 2):
+            step[i] = nodes[i + 1] - nodes[i]  # grid step
+            f[i] = (j * step[i]) ** 2 * f_nodes[i + 1]
+    f[0] -= bc1
+    f[-1] -= bc2
     sol = linalg.spsolve(m, f, use_umfpack=True)
-    for i in range(sol.size):
-        y[i+1] = sol[i]
-    print(np.array(y))
+    with boundscheck(False), wraparound(False):
+        for i in range(n - 2):
+            y[i+1] = sol[i]
     dy = np.gradient(y, nodes, edge_order=2) / j
     d2y = np.gradient(dy, nodes, edge_order=2) / j
-    residual = np.array(f_nodes) - np.array(d2y)
+    with boundscheck(False), wraparound(False):
+        for i in range(n):
+            residual[i] = f_nodes[i] - d2y[i]
     return np.array(y), np.array(residual)
 
 
-cpdef dirichlet_poisson_solver(double[:] nodes, double[:] (*f)(double[:] *), double bc1, double bc2, double j=1.0):
+cpdef dirichlet_poisson_solver(double[:] nodes, Function f, double bc1, double bc2, double j=1.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -57,7 +70,7 @@ cpdef dirichlet_poisson_solver(double[:] nodes, double[:] (*f)(double[:] *), dou
         y: 1D array of solution function y(x) values on nodes array.
         residual: error of the solution.
     """
-    return dirichlet_poisson_solver_arrays(nodes, f(nodes), bc1, bc2, j)
+    return dirichlet_poisson_solver_arrays(nodes, f.evaluate(nodes), bc1, bc2, j)
 
 
 cpdef dirichlet_poisson_solver_mesh_arrays(mesh, double[:] f_nodes):
@@ -72,7 +85,6 @@ cpdef dirichlet_poisson_solver_mesh_arrays(mesh, double[:] f_nodes):
     :return: mesh with solution and residual.
     """
     assert isinstance(mesh, Mesh1DUniform)
-    print(type(mesh.boundary_condition_1))
     y, residual = dirichlet_poisson_solver_arrays(mesh.local_nodes, f_nodes,
                                                   mesh.boundary_condition_1, mesh.boundary_condition_2,
                                                   mesh.jacobian)
@@ -81,7 +93,7 @@ cpdef dirichlet_poisson_solver_mesh_arrays(mesh, double[:] f_nodes):
     return mesh
 
 
-def dirichlet_poisson_solver_mesh(mesh, f):
+cpdef dirichlet_poisson_solver_mesh(mesh, Function f):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -93,11 +105,12 @@ def dirichlet_poisson_solver_mesh(mesh, f):
     :return: mesh with solution and residual.
     """
     assert isinstance(mesh, Mesh1DUniform)
-    return dirichlet_poisson_solver_mesh_arrays(mesh, f(mesh.physical_nodes))
+    return dirichlet_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.physical_nodes))
 
 
-def dirichlet_poisson_solver_amr(boundary_1, boundary_2, step, f, bc1, bc2,
-                                 threshold=1e-2, max_level=10):
+cpdef dirichlet_poisson_solver_amr(double boundary_1, double boundary_2, double step, Function f,
+                                   double bc1, double bc2,
+                                   double threshold=1e-2, int max_level=10):
     """
     Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
     :param boundary_1: physical nodes left boundary.

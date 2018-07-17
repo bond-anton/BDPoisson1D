@@ -32,7 +32,7 @@ cpdef fd_d2_matrix(int size):
         double[:] a, b
     a = -2 * np.ones(size)
     b = np.ones(size)
-    return dia_matrix(([b, a, b], [-1, 0, 1]), (size, size), dtype=np.float).tocsr()
+    return dia_matrix(([b, a, b], [-1, 0, 1]), (size, size), dtype=np.double).tocsr()
 
 
 cpdef interp_fn(double[:] x, double[:] y, str extrapolation='linear'):

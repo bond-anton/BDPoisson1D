@@ -3,7 +3,10 @@ import warnings
 import numpy as np
 from scipy.sparse import linalg, dia_matrix
 
+from cython cimport boundscheck, wraparound
+
 from._helpers cimport trapz_1d
+from .Function cimport Function
 
 
 cpdef neumann_poisson_solver_arrays(double[:] nodes, double[:] f_nodes,
@@ -25,33 +28,41 @@ cpdef neumann_poisson_solver_arrays(double[:] nodes, double[:] f_nodes,
         residual: error of the solution.
     """
     cdef:
-        double integral, step
-        double[:] a, b, c, y, f, dy, d2y, residual
-    integral = trapz_1d(f_nodes, nodes)
+        int i, n = nodes.size
+        double integral = trapz_1d(f_nodes, nodes)
+        double[:] y = np.zeros(n, dtype=np.double)
+        double[:] residual = np.zeros(n, dtype=np.double)
+        double[:] step = np.zeros(n - 1, dtype=np.double)
+        double[:] f = np.zeros(n - 1, dtype=np.double)
+        double[:] a = -2 * np.ones(n - 1, dtype=np.double)
+        double[:] b = np.ones(n - 1, dtype=np.double)
+        double[:] c = np.ones(n - 1, dtype=np.double)
+        double[:] dy, d2y, sol
     if abs(integral - bc2 + bc1) > 1e-4:
         warnings.warn('Not well-posed! Redefine f function and boundary conditions or refine the mesh!')
-    #step = np.array(nodes[1:]) - np.array(nodes[:-1])  # grid step
-    step = nodes[1] - nodes[0]
-    a = -2 * np.ones(nodes.size - 1)
+    with boundscheck(False), wraparound(False):
+        for i in range(n - 1):
+            step[i] = nodes[i + 1] - nodes[i]  # grid step
+            f[i] = (j * step[i]) ** 2 * f_nodes[i + 1]
+    f[0] += step[0] ** 2 * f_nodes[0] + 2 * step[0] * bc1 + y0
+    f[-1] -= 2 * step[-1] * bc2
     a[0] = 0
-    b = np.ones(nodes.size - 1)
-    c = np.ones(nodes.size - 1)
     b[-2] = 2
-    m = dia_matrix(([b, a, c], [-1, 0, 1]), (nodes.size - 1, nodes.size - 1), dtype=np.float).tocsr()
-    f = (j * step) ** 2 * np.array(f_nodes[1:])
-    #f[0] += step[0] ** 2 * f_nodes[0] + 2 * step[0] * bc1 + y0
-    f[0] += step ** 2 * f_nodes[0] + 2 * step * bc1 + y0
-    #f[-1] -= 2 * step[-1] * bc2
-    f[-1] -= 2 * step * bc2
-    y = linalg.spsolve(m, np.array(f), use_umfpack=True)
-    y = np.append([y0], np.array(y))  # solution vector
+    m = dia_matrix(([b, a, c], [-1, 0, 1]), (n - 1, n - 1), dtype=np.double).tocsr()
+    sol = linalg.spsolve(m, f, use_umfpack=True)
+    with boundscheck(False), wraparound(False):
+        for i in range(n - 1):
+            y[i + 1] = sol[i]
+    y[0] = y0
     dy = np.gradient(y, nodes, edge_order=2) / j
     d2y = np.gradient(dy, nodes, edge_order=2) / j
-    residual = np.array(f_nodes) - np.array(d2y)
+    with boundscheck(False), wraparound(False):
+        for i in range(n):
+            residual[i] = f_nodes[i] - d2y[i]
     return np.array(y), np.array(residual)
 
 
-def neumann_poisson_solver(nodes, f, bc1, bc2, j=1, y0=0):
+cpdef neumann_poisson_solver(double[:] nodes, Function f, double bc1, double bc2, double j=1.0, double y0=0.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -68,4 +79,4 @@ def neumann_poisson_solver(nodes, f, bc1, bc2, j=1, y0=0):
         y: 1D array of solution function y(x) values on nodes array.
         residual: error of the solution.
     """
-    return neumann_poisson_solver_arrays(nodes, f(nodes), bc1, bc2, j, y0)
+    return neumann_poisson_solver_arrays(nodes, f.evaluate(nodes), bc1, bc2, j, y0)
