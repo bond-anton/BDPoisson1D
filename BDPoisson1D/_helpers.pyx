@@ -3,7 +3,7 @@ import numpy as np
 from scipy.sparse import dia_matrix
 from scipy.interpolate import interp1d
 
-from BDMesh import Mesh1DUniform
+from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 
 from libc.math cimport floor, ceil
 from cython cimport boundscheck, wraparound
@@ -53,18 +53,17 @@ cpdef interp_fn(double[:] x, double[:] y, str extrapolation='linear'):
         return interp1d(x, y, bounds_error=False, fill_value=np.nan)
 
 
-cpdef points_for_refinement(mesh, float threshold):
+cpdef list points_for_refinement(Mesh1DUniform mesh, double threshold):
     """
     returns sorted arrays of mesh nodes indices, which require refinement
     :param mesh: mesh of type BDMesh.Mesh1DUniform
     :param threshold: threshold value for mesh.residual
     :return: arrays of bad nodes indices for refinement
     """
-    assert isinstance(mesh, Mesh1DUniform)
-    bad_nodes = np.sort(np.where(abs(mesh.residual) > threshold)[0])
-    split_idx = np.where(bad_nodes[1:] - bad_nodes[:-1] > 1)[0] + 1
-    bad_nodes = np.split(bad_nodes, split_idx)
-    return bad_nodes
+    cdef:
+        long[:] bad_nodes = np.sort(np.where(abs(mesh.residual) > threshold)[0])
+        long[:] split_idx = np.where(np.asarray(bad_nodes[1:]) - np.asarray(bad_nodes[:-1]) > 1)[0] + 1
+    return list(np.split(bad_nodes, split_idx))
 
 
 cpdef adjust_range(long[:] idx_range, int max_index, crop=(0, 0), int step_scale=1):

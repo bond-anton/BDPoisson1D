@@ -58,7 +58,7 @@ class TestHelpers(unittest.TestCase):
         np.testing.assert_equal(indices[0], np.array([0]))
         np.testing.assert_equal(indices[1], np.array([3, 4]))
         np.testing.assert_equal(indices[2], np.array([8, 9, 10]))
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
             points_for_refinement(1, threshold=threshold)
         with self.assertRaises(TypeError):
             points_for_refinement(mesh, threshold='a')
