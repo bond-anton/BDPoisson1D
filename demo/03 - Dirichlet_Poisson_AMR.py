@@ -3,6 +3,22 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_poisson_solver_amr
+from BDPoisson1D import Function, NumericDiff
+
+
+class TestFunction(Function):
+    """
+    Some known differentiable function
+    """
+    def evaluate(self, x):
+        return -10 * np.sin(np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
+
+
+y = TestFunction()
+dy_numeric = NumericDiff(y)
+d2y_numeric = NumericDiff(dy_numeric)
+
+f = NumericDiff(dy_numeric)
 
 
 def plot_tree(mesh_tree, axes=None):
@@ -21,50 +37,24 @@ def plot_tree(mesh_tree, axes=None):
     axes.grid()
 
 
-def y(x):
-    """
-    Some known differentiable function
-    :param x: 1D array of nodes
-    :return: y(x) values of function at x nodes
-    """
-    return -20 * np.sin(2 * np.pi * x**2) / (2 * np.pi) + 3 * x ** 2 + x + 5
-
-
-def dy_numeric(x):
-    """
-    Numeric value of first derivative of y(x)
-    :param x: 1D array of nodes
-    :return: y(x) first derivative values at x nodes
-    """
-    return np.gradient(y(x), x, edge_order=2)
-
-
-def d2y_numeric(x):
-    """
-    Numeric calculation of second derivative of y(x) at given nodes
-    :param x: 1D array of nodes
-    :return: y(x) second derivative values at x nodes
-    """
-    return np.gradient(dy_numeric(x), x, edge_order=2)
-
-
-def f(x):
-    return d2y_numeric(x)
-
 start = 0.2
 stop = 1.2
-step = 0.01
-meshes = dirichlet_poisson_solver_amr(start, stop, step, f, y(start), y(stop), 1.0e-2, max_level=15)
+step = 0.02
+meshes = dirichlet_poisson_solver_amr(start, stop, step, f,
+                                      y.evaluate(np.array([start]))[0],
+                                      y.evaluate(np.array([stop]))[0],
+                                      max_iter=100,
+                                      threshold=1.0e-4, max_level=15)
 flat_mesh = meshes.flatten()
-dy_solution = np.gradient(flat_mesh.solution, flat_mesh.physical_nodes, edge_order=2)
-d2y_solution = np.gradient(dy_solution, flat_mesh.physical_nodes, edge_order=2)
+dy_solution = np.gradient(flat_mesh.solution, flat_mesh.physical_nodes, edge_order=1)
+d2y_solution = np.gradient(dy_solution, flat_mesh.physical_nodes, edge_order=1)
 
 # Plot the result
 fig, ax = plt.subplots(nrows=2, ncols=2, sharex=True)
 ax[0][0].plot(flat_mesh.physical_nodes, d2y_solution, 'b-', label='d2y/dx2 (solution)')
-ax[0][0].plot(flat_mesh.physical_nodes, f(flat_mesh.physical_nodes), 'r-', label='f(x)')
+ax[0][0].plot(flat_mesh.physical_nodes, f.evaluate(flat_mesh.physical_nodes), 'r-', label='f(x)')
 ax[0][1].plot(flat_mesh.physical_nodes, flat_mesh.solution, 'b-', label='solution')
-ax[0][1].plot(flat_mesh.physical_nodes, y(flat_mesh.physical_nodes), 'r-', label='y(x)')
+ax[0][1].plot(flat_mesh.physical_nodes, y.evaluate(flat_mesh.physical_nodes), 'r-', label='y(x)')
 ax[1][0].plot(flat_mesh.physical_nodes, flat_mesh.residual, 'g-o', label='residual')
 plot_tree(meshes, ax[1][1])
 ax[0][0].legend()
