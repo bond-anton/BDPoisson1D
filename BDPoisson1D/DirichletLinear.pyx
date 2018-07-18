@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 
 import numpy as np
-from scipy.sparse import linalg
+from scipy.sparse.linalg import spsolve
 
 from cython cimport boundscheck, wraparound
 
@@ -44,14 +44,14 @@ cpdef dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_nodes, double
         f[i] = (j * step[i]) ** 2 * f_nodes[i + 1]
     f[0] -= bc1
     f[n - 3] -= bc2
-    sol = linalg.spsolve(m, f, use_umfpack=True)
+    sol = spsolve(m, f, use_umfpack=True)
     for i in range(n - 2):
         y[i + 1] = sol[i]
     dy = np.gradient(y, nodes, edge_order=2) / j
     d2y = np.gradient(dy, nodes, edge_order=2) / j
     for i in range(n):
         residual[i] = f_nodes[i] - d2y[i]
-    return np.array(y), np.array(residual)
+    return np.asarray(y), np.asarray(residual)
 
 
 cpdef dirichlet_poisson_solver(double[:] nodes, Function f, double bc1, double bc2, double j=1.0):
@@ -107,9 +107,10 @@ cpdef dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
 
 
 @boundscheck(False)
-@wraparound(False)
+@wraparound(True)
 cpdef dirichlet_poisson_solver_amr(double boundary_1, double boundary_2, double step, Function f,
                                    double bc1, double bc2,
+                                   int max_iter=1000,
                                    double threshold=1e-2, int max_level=10):
     """
     Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
@@ -119,6 +120,7 @@ cpdef dirichlet_poisson_solver_amr(double boundary_1, double boundary_2, double 
     :param f: function f(x) callable on nodes array.
     :param bc1: boundary condition at nodes[0] point (a number).
     :param bc2: boundary condition at nodes[n] point (a number).
+    :param max_iter: maximal number of allowed iterations.
     :param threshold: algorithm convergence residual threshold value.
     :param max_level: max level of mesh refinement.
     :return: meshes tree with solution and residual.
@@ -126,15 +128,16 @@ cpdef dirichlet_poisson_solver_amr(double boundary_1, double boundary_2, double 
     cdef:
         Mesh1DUniform root_mesh, mesh
         TreeMesh1DUniform meshes_tree
-        int level, mesh_id, idx1, idx2
-        list refinements, refinement_points_chunks, mesh_crop
+        int level, mesh_id, idx1, idx2, i = 0
         long[:] converged, block
+        list refinements, refinement_points_chunks, mesh_crop
     root_mesh = Mesh1DUniform(boundary_1, boundary_2,
                               boundary_condition_1=bc1,
                               boundary_condition_2=bc2,
                               physical_step=round(step, 9))
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-    while True:
+    while i < max_iter:
+        i += 1
         level = max(meshes_tree.levels)
         converged = np.zeros(len(meshes_tree.__tree[level]), dtype=np.int)
         refinements = []
@@ -142,12 +145,12 @@ cpdef dirichlet_poisson_solver_amr(double boundary_1, double boundary_2, double 
             mesh = dirichlet_poisson_solver_mesh(mesh, f)
             mesh.trim()
             refinement_points_chunks = points_for_refinement(mesh, threshold)
-            converged[mesh_id] = np.all(np.array([block.size == 0 for block in refinement_points_chunks]))
+            converged[mesh_id] = not len(refinement_points_chunks) > 0
             if converged[mesh_id]:
                 continue
             elif level < max_level:
                 for block in refinement_points_chunks:
-                    idx1, idx2, mesh_crop = adjust_range(block, mesh.__num - 1, crop=[10, 10],
+                    idx1, idx2, mesh_crop = adjust_range(block, mesh.__num - 1, crop=[20, 20],
                                                          step_scale=meshes_tree.refinement_coefficient)
                     refinements.append(Mesh1DUniform(
                         mesh.to_physical(np.array([mesh.__local_nodes[idx1]]))[0],

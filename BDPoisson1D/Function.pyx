@@ -27,7 +27,8 @@ cdef class InterpolateFunction(Function):
         for i in range(n):
             while x[i] > self.__x[j] and j < self.__n - 1:
                 j += 1
-            y[i] = y[j-1] + (x[i] - self.__x[j-1]) * (self.__y[j] - self.__y[j-1]) / (self.__x[j] - self.__x[j-1])
+            y[i] = self.__y[j-1] + (x[i] - self.__x[j-1]) * \
+                   (self.__y[j] - self.__y[j-1]) / (self.__x[j] - self.__x[j-1])
         return y
 
 

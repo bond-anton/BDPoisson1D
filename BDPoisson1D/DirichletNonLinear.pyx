@@ -12,6 +12,7 @@ from .Function cimport Function, Functional, InterpolateFunction
 
 
 @boundscheck(False)
+@wraparound(False)
 cpdef dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, double[:] y0_nodes,
                                                  double[:] f_nodes, double[:] df_ddy_nodes,
                                                  double bc1, double bc2, double j=1.0, double w=1.0):
@@ -49,7 +50,7 @@ cpdef dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, double[:] y0_n
         f[i] = (j * step[i]) ** 2 * f_nodes[i + 1] - b[i]
     m = m1 - dia_matrix(([a], [0]), (n - 2, n - 2)).tocsr()
     f[0] -= bc1
-    f[-1] -= bc2
+    f[n - 3] -= bc2
     dy[0] = bc1 - y0_nodes[0]
     y[0] = y0_nodes[0] + w * dy[0]
     dy[n - 1] = bc2 - y0_nodes[n - 1]
@@ -216,7 +217,7 @@ cpdef dirichlet_non_linear_poisson_solver_amr(double boundary_1, double boundary
     cdef:
         Mesh1DUniform root_mesh, mesh
         TreeMesh1DUniform meshes_tree
-        int level, mesh_id, idx1, idx2
+        int level, mesh_id, idx1, idx2, i = 0
         long[:] converged, block
         list refinements, refinement_points_chunks, mesh_crop
     root_mesh = Mesh1DUniform(boundary_1, boundary_2,
@@ -224,7 +225,8 @@ cpdef dirichlet_non_linear_poisson_solver_amr(double boundary_1, double boundary
                               boundary_condition_2=bc2,
                               physical_step=round(step, 9))
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-    while True:
+    while i < max_iter:
+        i += 1
         level = max(meshes_tree.levels)
         converged = np.zeros(len(meshes_tree.__tree[level]), dtype=np.int)
         refinements = []
@@ -238,7 +240,7 @@ cpdef dirichlet_non_linear_poisson_solver_amr(double boundary_1, double boundary
             if converged[mesh_id]:
                 continue
             refinement_points_chunks = points_for_refinement(mesh, mesh_refinement_threshold)
-            converged[mesh_id] = np.all(np.array([block.size == 0 for block in refinement_points_chunks]))
+            converged[mesh_id] = not len(refinement_points_chunks) > 0
             if converged[mesh_id]:
                 continue
             elif level < max_level:

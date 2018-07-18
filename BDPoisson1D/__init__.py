@@ -5,3 +5,4 @@ from .DirichletNonLinear import dirichlet_non_linear_poisson_solver, dirichlet_n
 from .DirichletNonLinear import dirichlet_non_linear_poisson_solver_recurrent_mesh
 from .DirichletNonLinear import dirichlet_non_linear_poisson_solver_amr
 from .NeumannLinear import neumann_poisson_solver
+from .Function import Function, InterpolateFunction, Functional, NumericDiff

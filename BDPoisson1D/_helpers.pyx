@@ -35,24 +35,6 @@ cpdef fd_d2_matrix(int size):
     return dia_matrix(([b, a, b], [-1, 0, 1]), (size, size), dtype=np.double).tocsr()
 
 
-cpdef interp_fn(double[:] x, double[:] y, str extrapolation='linear'):
-    """
-    scipy interp1d wrapper to simplify usage
-    :param x: 1D array of x nodes values
-    :param y: 1D array of the same size as x of interpolated function values at x nodes
-    :param extrapolation: extrapolation style could be one of 'linear', 'last', and 'zero'
-    :return: function of single argument x which interpolates given input data [x, y]
-    """
-    if extrapolation == 'linear':
-        return interp1d(x, y, bounds_error=False, fill_value='extrapolate')
-    elif extrapolation == 'last':
-        return interp1d(x, y, bounds_error=False, fill_value=(y[0], y[-1]))
-    elif extrapolation == 'zero':
-        return interp1d(x, y, bounds_error=False, fill_value=0.0)
-    else:
-        return interp1d(x, y, bounds_error=False, fill_value=np.nan)
-
-
 cpdef list points_for_refinement(Mesh1DUniform mesh, double threshold):
     """
     returns sorted arrays of mesh nodes indices, which require refinement
@@ -62,10 +44,14 @@ cpdef list points_for_refinement(Mesh1DUniform mesh, double threshold):
     """
     cdef:
         long[:] bad_nodes = np.sort(np.where(abs(mesh.residual) > threshold)[0])
-        long[:] split_idx = np.where(np.asarray(bad_nodes[1:]) - np.asarray(bad_nodes[:-1]) > 1)[0] + 1
-    return list(np.split(bad_nodes, split_idx))
+        long[:] split_idx
+    if bad_nodes.size > 0:
+        split_idx = np.where(np.asarray(bad_nodes[1:]) - np.asarray(bad_nodes[:-1]) > 1)[0] + 1
+        return list(np.split(bad_nodes, split_idx))
+    else:
+        return []
 
-
+@wraparound(False)
 cpdef adjust_range(long[:] idx_range, int max_index, crop=(0, 0), int step_scale=1):
     """
     Calculates start and stop indices for refinement mesh generation given a range of indices
@@ -76,10 +62,10 @@ cpdef adjust_range(long[:] idx_range, int max_index, crop=(0, 0), int step_scale
     :return: a pair of indices and a crop tuple for refinement mesh constructor
     """
     cdef:
-        int idx1, idx2
+        int idx1, idx2, n = idx_range.size
         int[2] mesh_crop = [0, 0]
     idx1 = max(idx_range[0], 0)
-    idx2 = min(idx_range[-1], max_index)
+    idx2 = min(idx_range[n - 1], max_index)
     if idx2 - idx1 < 2:
         if idx2 == max_index and idx1 == 0:
             return idx1, idx2, mesh_crop

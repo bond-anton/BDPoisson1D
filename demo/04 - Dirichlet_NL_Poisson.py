@@ -3,24 +3,47 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_non_linear_poisson_solver
+from BDPoisson1D import Function, Functional, NumericDiff
+
+
+class TestFunction(Function):
+    """
+    Some known differentiable function
+    """
+    def evaluate(self, x):
+        return np.exp(-np.asarray(x) * 3)
+
+
+class TestFunctional(Functional):
+    def __init__(self, Nd, kT, f):
+        super(TestFunctional, self).__init__(f)
+        self.Nd = Nd
+        self.kT = kT
+
+    def evaluate(self, x):
+        return self.Nd(np.asarray(x)) * (1 - (np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)))
+
+
+class TestFunctionalDf(Functional):
+    def __init__(self, Nd, kT, f):
+        super(TestFunctionalDf, self).__init__(f)
+        self.Nd = Nd
+        self.kT = kT
+
+    def evaluate(self, x):
+        return self.Nd(np.asarray(x)) / self.kT * np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)
+
 
 Nd = lambda x: np.ones_like(x)
 kT = 1 / 20
 
-
-def f(x, Psi):
-    return Nd(x) * (1 - (np.exp(-Psi(x) / kT)))
-
-
-def dfdDPsi(x, Psi):
-    return Nd(x) / kT * np.exp(-Psi(x) / kT)
-
-
-Psi = lambda x: np.exp(-x * 3)
+Psi = TestFunction()
+f = TestFunctional(Nd, kT, Psi)
+dfdDPsi = TestFunctionalDf(Nd, kT, Psi)
 
 nodes = np.linspace(0., 4., num=21, endpoint=True, dtype=np.float)
-bc1 = 1
-bc2 = 0
+bc1 = 1.0
+bc2 = 0.0
 
 print(nodes, nodes.size, nodes.dtype)
 
@@ -31,13 +54,13 @@ ax1.set_autoscaley_on(True)
 ax2.set_autoscaley_on(True)
 ax3.set_autoscaley_on(True)
 ax4.set_autoscaley_on(True)
-Psi_line, = ax1.plot(nodes, Psi(nodes))
+Psi_line, = ax1.plot(nodes, Psi.evaluate(nodes))
 DPsi_line, = ax2.plot(nodes, DPsi)
-f_line, = ax3.plot(nodes, f(nodes, Psi))
+f_line, = ax3.plot(nodes, f.evaluate(nodes))
 E_line, = ax4.plot(nodes, E)
-print(Psi(nodes), Psi(nodes).size, Psi(nodes).dtype)
+print(Psi.evaluate(nodes), Psi.evaluate(nodes).size, Psi.evaluate(nodes).dtype)
 
-dPsi = np.gradient(Psi(nodes), nodes, edge_order=2)
+dPsi = np.gradient(Psi.evaluate(nodes), nodes, edge_order=2)
 print(dPsi, dPsi.size)
 d2Psi = np.gradient(dPsi, nodes, edge_order=2)
 print(d2Psi, d2Psi.size)
@@ -49,12 +72,12 @@ plt.draw()
 
 for i in range(100):
     print(i + 1)
-    Psi, DPsi, R = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdDPsi, bc1=1, bc2=0, j=1)
-    dPsi = np.gradient(Psi(nodes), nodes, edge_order=2)
+    Psi, DPsi, R = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdDPsi, bc1=bc1, bc2=bc2, j=1.0)
+    dPsi = np.gradient(Psi.evaluate(nodes), nodes, edge_order=2)
     d2Psi = np.gradient(dPsi, nodes, edge_order=2)
-    Psi_line.set_ydata(Psi(nodes))
+    Psi_line.set_ydata(Psi.evaluate(nodes))
     DPsi_line.set_ydata(DPsi)
-    f_line.set_ydata(f(nodes, Psi))
+    f_line.set_ydata(f.evaluate(nodes))
     d2Psi_line.set_ydata(d2Psi)
     E_line.set_ydata(R)
     ax1.relim()

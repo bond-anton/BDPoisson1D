@@ -28,6 +28,7 @@ setup(
 
     description='BD Finite Difference Poisson equation solver',
     long_description=long_description,
+    long_description_content_type='text/markdown',
 
     url='https://github.com/bond-anton/BDPoisson1D',
 
@@ -55,6 +56,9 @@ setup(
 
     packages=find_packages(exclude=['demo', 'tests', 'docs', 'contrib', 'venv']),
     ext_modules=cythonize('BDPoisson1D/*.pyx'),
+    package_data={'BDPoisson1D': ['DirichletLinear.pxd', 'DirichletNonLinear.pxd',
+                                  'NeumannLinear.pxd', 'NeumannNonLinear.pxd',
+                                  'Function.pxd']},
     install_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.4'],
     test_suite='nose.collector',
     tests_require=['nose']

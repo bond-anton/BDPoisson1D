@@ -5,6 +5,43 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_non_linear_poisson_solver_amr
+from BDPoisson1D import Function, Functional
+
+
+class TestFunction(Function):
+    """
+    Some known differentiable function
+    """
+    def evaluate(self, x):
+        return np.exp(-np.asarray(x) * 3)
+
+
+class TestFunctional(Functional):
+    def __init__(self, Nd, kT, f):
+        super(TestFunctional, self).__init__(f)
+        self.Nd = Nd
+        self.kT = kT
+
+    def evaluate(self, x):
+        return self.Nd(np.asarray(x)) * (1 - (np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)))
+
+
+class TestFunctionalDf(Functional):
+    def __init__(self, Nd, kT, f):
+        super(TestFunctionalDf, self).__init__(f)
+        self.Nd = Nd
+        self.kT = kT
+
+    def evaluate(self, x):
+        return self.Nd(np.asarray(x)) / self.kT * np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)
+
+
+Nd = lambda x: np.ones_like(x)
+kT = 1 / 20
+
+Psi = TestFunction()
+f = TestFunctional(Nd, kT, Psi)
+dfdDPsi = TestFunctionalDf(Nd, kT, Psi)
 
 colors = ['b', 'g', 'y', 'k', 'm', 'c', 'b', 'g', 'y', 'k', 'm', 'c', 'b', 'g', 'y',
           'k', 'm', 'c', 'b', 'g', 'y', 'k', 'm', 'c']
@@ -26,23 +63,11 @@ def plot_tree(mesh_tree, axes=None):
     axes.grid()
 
 
-Nd = lambda x: np.ones_like(x)
-kT = 1/40
-
-
-def f(x, Psi):    
-    return 2*(1 - (np.exp(-Psi(x)/kT)))
-
-
-def dfdDPsi(x, Psi):
-    return 2/kT * np.exp(-Psi(x)/kT)
-
-Psi = lambda x: np.exp(-0.7*x)
 start = 0.0
-stop = 5
+stop = 5.0
 step = 0.5
-bc1 = 1
-bc2 = 0
+bc1 = 1.0
+bc2 = 0.0
 
 Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdDPsi, bc1, bc2,
                                                  max_iter=1000, residual_threshold=1.5e-3,
