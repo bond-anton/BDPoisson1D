@@ -44,7 +44,7 @@ meshes = dirichlet_poisson_solver_amr(start, stop, step, f,
                                       y.evaluate(np.array([start]))[0],
                                       y.evaluate(np.array([stop]))[0],
                                       max_iter=100,
-                                      threshold=1.0e-4, max_level=2)
+                                      threshold=1.0e-4, max_level=15)
 flat_mesh = meshes.flatten()
 dy_solution = np.gradient(flat_mesh.solution, flat_mesh.physical_nodes, edge_order=1)
 d2y_solution = np.gradient(dy_solution, flat_mesh.physical_nodes, edge_order=1)
