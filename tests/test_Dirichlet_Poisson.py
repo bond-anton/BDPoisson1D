@@ -31,10 +31,10 @@ class TestDirichlet(unittest.TestCase):
         bc1 = self.y.evaluate([start])[0]  # left Dirichlet boundary condition
         bc2 = self.y.evaluate([stop])[0]  # right Dirichlet boundary condition
 
-        _, residual_1 = dirichlet_poisson_solver_arrays(nodes, self.d2y_numeric.evaluate(nodes), bc1, bc2, j=1)
+        result_1 = np.asarray(dirichlet_poisson_solver_arrays(nodes, self.d2y_numeric.evaluate(nodes), bc1, bc2, j=1))
         nodes = np.linspace(start, stop, num=101, endpoint=True)
-        _, residual_2 = dirichlet_poisson_solver_arrays(nodes, self.d2y_numeric.evaluate(nodes), bc1, bc2, j=1)
-        self.assertTrue(max(abs(residual_2)) < max(abs(residual_1)))
+        result_2 = np.asarray(dirichlet_poisson_solver_arrays(nodes, self.d2y_numeric.evaluate(nodes), bc1, bc2, j=1))
+        self.assertTrue(max(abs(result_2[:, 1])) < max(abs(result_1[:, 1])))
 
     def test_dirichlet_poisson_solver(self):
         start = -1.0
@@ -44,10 +44,10 @@ class TestDirichlet(unittest.TestCase):
         bc1 = self.y.evaluate([start])[0]  # left Dirichlet boundary condition
         bc2 = self.y.evaluate([stop])[0]  # right Dirichlet boundary condition
 
-        _, residual_1 = dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0)
+        result_1 = np.asarray(dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0))
         nodes = np.linspace(start, stop, num=101, endpoint=True)
-        _, residual_2 = dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0)
-        self.assertTrue(max(abs(residual_2)) < max(abs(residual_1)))
+        result_2 = np.asarray(dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0))
+        self.assertTrue(max(abs(result_2[:, 1])) < max(abs(result_1[:, 1])))
 
     def test_dirichlet_poisson_solver_mesh(self):
         start = -1.0
@@ -56,24 +56,24 @@ class TestDirichlet(unittest.TestCase):
                                boundary_condition_1=self.y.evaluate([start])[0],
                                boundary_condition_2=self.y.evaluate([stop])[0],
                                physical_step=0.02)
-        mesh_1 = dirichlet_poisson_solver_mesh_arrays(mesh_1, self.d2y_numeric.evaluate(mesh_1.physical_nodes))
+        dirichlet_poisson_solver_mesh_arrays(mesh_1, self.d2y_numeric.evaluate(mesh_1.physical_nodes))
         mesh_2 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y.evaluate([start])[0],
                                boundary_condition_2=self.y.evaluate([stop])[0],
                                physical_step=0.01)
-        mesh_2 = dirichlet_poisson_solver_mesh_arrays(mesh_2, self.d2y_numeric.evaluate(mesh_2.physical_nodes))
+        dirichlet_poisson_solver_mesh_arrays(mesh_2, self.d2y_numeric.evaluate(mesh_2.physical_nodes))
         self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
 
         mesh_1 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y.evaluate([start])[0],
                                boundary_condition_2=self.y.evaluate([stop])[0],
                                physical_step=0.02)
-        mesh_1 = dirichlet_poisson_solver_mesh(mesh_1, self.d2y_numeric)
+        dirichlet_poisson_solver_mesh(mesh_1, self.d2y_numeric)
         mesh_2 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y.evaluate([start])[0],
                                boundary_condition_2=self.y.evaluate([stop])[0],
                                physical_step=0.01)
-        mesh_2 = dirichlet_poisson_solver_mesh(mesh_2, self.d2y_numeric)
+        dirichlet_poisson_solver_mesh(mesh_2, self.d2y_numeric)
         self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
 
     def test_dirichlet_poisson_solver_amr(self):

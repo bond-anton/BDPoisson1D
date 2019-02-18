@@ -1,6 +1,6 @@
-import numpy as np
-
 from cython cimport boundscheck, wraparound
+from cpython.array cimport array, clone
+from ._helpers cimport gradient1d
 
 
 cdef class Function(object):
@@ -15,15 +15,16 @@ cdef class InterpolateFunction(Function):
         super(InterpolateFunction, self).__init__()
         self.__x = x
         self.__y = y
-        self.__n = x.size
+        self.__n = x.shape[0]
 
     @boundscheck(False)
     @wraparound(False)
     cpdef double[:] evaluate(self, double[:] x):
         cdef:
-            int n = x.size
+            int n = x.shape[0]
             int i, j = 1
-            double[:] y = np.zeros(n, dtype=np.double)
+            array[double] y, template = array('d')
+        y = clone(template, n, zero=False)
         for i in range(n):
             while x[i] > self.__x[j] and j < self.__n - 1:
                 j += 1
@@ -53,4 +54,4 @@ cdef class NumericDiff(Functional):
         super(NumericDiff, self).__init__(f)
 
     cpdef double[:] evaluate(self, double[:] x):
-        return np.gradient(self.__f.evaluate(x), x, edge_order=2)
+        return gradient1d(self.__f.evaluate(x), x, x.shape[0])

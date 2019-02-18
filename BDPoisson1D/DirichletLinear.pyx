@@ -1,19 +1,19 @@
-from __future__ import division, print_function
-
 import numpy as np
-from scipy.sparse.linalg import spsolve
 
 from cython cimport boundscheck, wraparound
+from cpython.array cimport array, clone
+
+from scipy.linalg.cython_lapack cimport dgtsv
 
 from BDMesh.TreeMesh1DUniform cimport TreeMesh1DUniform
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
-from ._helpers cimport fd_d2_matrix, points_for_refinement, adjust_range
+from ._helpers cimport gradient1d, points_for_refinement, adjust_range
 from .Function cimport Function
 
 
 @boundscheck(False)
 @wraparound(False)
-cpdef dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_nodes, double bc1, double bc2, double j=1.0):
+cpdef double[:, :] dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_nodes, double bc1, double bc2, double j=1.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -26,35 +26,37 @@ cpdef dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_nodes, double
     :param bc2: boundary condition at nodes[n] point (a number).
     :param j: Jacobian.
     :return:
-        y: 1D array of solution function y(x) values on nodes array.
-        residual: error of the solution.
+        result: 2D array of solution function y(x) values on nodes array and the error of the solution.
     """
     cdef:
-        int i, n = nodes.size
-        double[:] dy, d2y, sol
-        double[:] y = np.zeros(n, dtype=np.double)
-        double[:] residual = np.zeros(n, dtype=np.double)
-        double[:] step = np.zeros(n - 2, dtype=np.double)
-        double[:] f = np.zeros(n - 2, dtype=np.double)
-    y[0] = bc1
-    y[n - 1] = bc2
-    m = fd_d2_matrix(n - 2)
-    for i in range(n - 2):
-        step[i] = nodes[i + 1] - nodes[i]  # grid step
-        f[i] = (j * step[i]) ** 2 * f_nodes[i + 1]
-    f[0] -= bc1
-    f[n - 3] -= bc2
-    sol = spsolve(m, f, use_umfpack=True)
-    for i in range(n - 2):
-        y[i + 1] = sol[i]
-    dy = np.gradient(y, nodes, edge_order=2) / j
-    d2y = np.gradient(dy, nodes, edge_order=2) / j
+        int i, n = nodes.shape[0] - 2, nrhs = 1, info
+        double[:] d2y
+        array[double] y, residual, f, d, dl, du, template = array('d')
+        double[:, :] result = np.empty((n + 2, 2), dtype=np.double)
+    d = clone(template, n, zero=False)
+    dl = clone(template, n - 1, zero=False)
+    du = clone(template, n - 1, zero=False)
+    f = clone(template, n, zero=False)
+    result[0, 0] = bc1
+    result[n + 1, 0] = bc2
     for i in range(n):
-        residual[i] = f_nodes[i] - d2y[i]
-    return np.asarray(y), np.asarray(residual)
+        if i < n - 1:
+            dl[i] = 1.0
+            du[i] = 1.0
+        d[i] = -2.0
+        f[i] = (j * (nodes[i + 1] - nodes[i])) ** 2 * f_nodes[i + 1]
+    f[0] -= bc1
+    f[n - 1] -= bc2
+    dgtsv(&n, &nrhs, &dl[0], &d[0], &du[0], &f[0], &n, &info)
+    for i in range(n):
+        result[i + 1, 0] = f[i]
+    d2y = gradient1d(gradient1d(result[:, 0], nodes, n + 2), nodes, n + 2)
+    for i in range(n + 2):
+        result[i, 1] = f_nodes[i] - d2y[i] / (j * j)
+    return result
 
 
-cpdef dirichlet_poisson_solver(double[:] nodes, Function f, double bc1, double bc2, double j=1.0):
+cpdef double[:, :] dirichlet_poisson_solver(double[:] nodes, Function f, double bc1, double bc2, double j=1.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -73,7 +75,7 @@ cpdef dirichlet_poisson_solver(double[:] nodes, Function f, double bc1, double b
     return dirichlet_poisson_solver_arrays(nodes, f.evaluate(nodes), bc1, bc2, j)
 
 
-cpdef dirichlet_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_nodes):
+cpdef void dirichlet_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_nodes):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -82,17 +84,16 @@ cpdef dirichlet_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_nodes
 
     :param mesh: BDMesh to solve on.
     :param f_nodes: 1D array of values of f(x) on nodes array. Must be same shape as nodes.
-    :return: mesh with solution and residual.
     """
-    y, residual = dirichlet_poisson_solver_arrays(mesh.__local_nodes, f_nodes,
-                                                  mesh.__boundary_condition_1, mesh.__boundary_condition_2,
-                                                  mesh.j())
-    mesh.solution = y
-    mesh.residual = residual
-    return mesh
+    result = dirichlet_poisson_solver_arrays(mesh.__local_nodes, f_nodes,
+                                             mesh.__boundary_condition_1, mesh.__boundary_condition_2,
+                                             mesh.j())
+    mesh.solution = result[:, 0]
+    mesh.residual = result[:, 1]
+    # return mesh
 
 
-cpdef dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
+cpdef void dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -101,9 +102,8 @@ cpdef dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
 
     :param mesh: BDMesh to solve on.
     :param f: function f(x) callable on nodes array.
-    :return: mesh with solution and residual.
     """
-    return dirichlet_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.to_physical_coordinate(mesh.__local_nodes)))
+    dirichlet_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.to_physical_coordinate(mesh.__local_nodes)))
 
 
 @boundscheck(False)
@@ -142,7 +142,7 @@ cpdef dirichlet_poisson_solver_amr(double boundary_1, double boundary_2, double 
         converged = np.zeros(len(meshes_tree.__tree[level]), dtype=np.int)
         refinements = []
         for mesh_id, mesh in enumerate(meshes_tree.__tree[level]):
-            mesh = dirichlet_poisson_solver_mesh(mesh, f)
+            dirichlet_poisson_solver_mesh(mesh, f)
             mesh.trim()
             refinement_points_chunks = points_for_refinement(mesh, threshold)
             converged[mesh_id] = not len(refinement_points_chunks) > 0
