@@ -62,7 +62,7 @@ class TestDirichlet(unittest.TestCase):
                                boundary_condition_2=self.y.evaluate([stop])[0],
                                physical_step=0.01)
         mesh_2 = dirichlet_poisson_solver_mesh_arrays(mesh_2, self.d2y_numeric.evaluate(mesh_2.physical_nodes))
-        self.assertTrue(max(abs(mesh_2.residual)) < max(abs(mesh_1.residual)))
+        self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
 
         mesh_1 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y.evaluate([start])[0],
@@ -74,7 +74,7 @@ class TestDirichlet(unittest.TestCase):
                                boundary_condition_2=self.y.evaluate([stop])[0],
                                physical_step=0.01)
         mesh_2 = dirichlet_poisson_solver_mesh(mesh_2, self.d2y_numeric)
-        self.assertTrue(max(abs(mesh_2.residual)) < max(abs(mesh_1.residual)))
+        self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
 
     def test_dirichlet_poisson_solver_amr(self):
         start = 0.2
@@ -87,4 +87,4 @@ class TestDirichlet(unittest.TestCase):
                                               threshold, max_level=max_level)
         flat_mesh = meshes.flatten()
         if len(meshes.levels) < max_level:
-            self.assertTrue(max(abs(flat_mesh.residual)) < 1.0e-2)
+            self.assertTrue(max(abs(np.asarray(flat_mesh.residual))) < 1.0e-2)

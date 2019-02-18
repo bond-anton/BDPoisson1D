@@ -134,7 +134,7 @@ class TestDirichletNL(unittest.TestCase):
             Psi = InterpolateFunction(mesh_2.physical_nodes, mesh_2.solution)
             f.f = Psi
             dfdDPsi.f = Psi
-        self.assertTrue(max(abs(mesh_2.residual)) < max(abs(mesh_1.residual)))
+        self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
 
     def test_dirichlet_poisson_solver_mesh(self):
         start = 0.0
@@ -157,7 +157,7 @@ class TestDirichletNL(unittest.TestCase):
             mesh_2, Psi, _ = dirichlet_non_linear_poisson_solver_mesh(mesh_2, Psi, f, dfdDPsi, w=1)
             f.f = Psi
             dfdDPsi.f = Psi
-        self.assertTrue(max(abs(mesh_2.residual)) < max(abs(mesh_1.residual)))
+        self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
 
     def test_dirichlet_poisson_solver_recurrent_mesh(self):
         start = 0.0
@@ -197,7 +197,7 @@ class TestDirichletNL(unittest.TestCase):
         flat_grid = Meshes.flatten()
         if len(Meshes.levels) < max_level:
             self.assertTrue(flat_grid.integrational_residual < int_residual_threshold)
-            self.assertTrue(max(abs(flat_grid.residual)) < residual_threshold)
+            self.assertTrue(max(abs(np.asarray(flat_grid.residual))) < residual_threshold)
 
         residual_threshold = 1.5e-6
         int_residual_threshold = 1.5e-4

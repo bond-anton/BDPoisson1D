@@ -1,4 +1,6 @@
 from setuptools import setup, find_packages
+from setuptools.extension import Extension
+from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
 
 from codecs import open
@@ -21,6 +23,75 @@ else:
 readme_file = path.join(here, 'README.md')
 with open(readme_file, encoding='utf-8') as f:
     long_description = f.read()
+
+extensions = [
+    Extension(
+        'BDPoisson1D._helpers',
+        ['BDPoisson1D/_helpers.pyx'],
+        depends=['BDPoisson1D/_helpers.pxd'],
+    ),
+    Extension(
+        'BDPoisson1D.DirichletLinear',
+        ['BDPoisson1D/DirichletLinear.pyx'],
+        depends=['BDPoisson1D/DirichletLinear.pxd'],
+    ),
+    Extension(
+        'BDPoisson1D.DirichletNonLinear',
+        ['BDPoisson1D/DirichletNonLinear.pyx'],
+        depends=['BDPoisson1D/DirichletNonLinear.pxd'],
+    ),
+    Extension(
+        'BDPoisson1D.NeumannLinear',
+        ['BDPoisson1D/NeumannLinear.pyx'],
+        depends=['BDPoisson1D/NeumannLinear.pxd'],
+    ),
+    Extension(
+        'BDPoisson1D.Function',
+        ['BDPoisson1D/Function.pyx'],
+        depends=['BDPoisson1D/Function.pxd'],
+    ),
+]
+
+copt = {'msvc': ['/openmp', '/Ox', '/fp:fast', '/favor:INTEL64', '/Og'],
+        'mingw32': ['-fopenmp', '-O3', '-ffast-math', '-march=native'],
+        'unix': ['-fopenmp', '-O3', '-ffast-math', '-march=native']}
+lopt = {'mingw32': ['-fopenmp'],
+        'unix': ['-fopenmp']}
+
+
+# check whether compiler supports a flag
+def has_flag(compiler, flagname):
+    import tempfile
+    from distutils.errors import CompileError
+    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
+        f.write('int main (int argc, char **argv) { return 0; }')
+        try:
+            compiler.compile([f.name], extra_postargs=[flagname])
+        except CompileError:
+            return False
+    return True
+
+
+# filter flags, returns list of accepted flags
+def flag_filter(compiler, flags):
+    result = []
+    for flag in flags:
+        if has_flag(compiler, flag):
+            result.append(flag)
+    return result
+
+
+class CustomBuildExt(build_ext):
+    def build_extensions(self):
+        c = self.compiler.compiler_type
+        print('Compiler:', c)
+        opts = flag_filter(self.compiler, copt.get(c, []))
+        lopts = flag_filter(self.compiler, lopt.get(c, []))
+        for e in self.extensions:
+            e.extra_compile_args = opts
+            e.extra_link_args = lopts
+        build_ext.build_extensions(self)
+
 
 setup(
     name=package_name,
@@ -55,11 +126,12 @@ setup(
     keywords='FiniteDifference PDE Poisson',
 
     packages=find_packages(exclude=['demo', 'tests', 'docs', 'contrib', 'venv']),
-    ext_modules=cythonize('BDPoisson1D/*.pyx'),
+    ext_modules=cythonize('BDPoisson1D/*.pyx', compiler_directives={'language_level': 3}),
     package_data={'BDPoisson1D': ['DirichletLinear.pxd', 'DirichletNonLinear.pxd',
                                   'NeumannLinear.pxd', 'NeumannNonLinear.pxd',
                                   'Function.pxd']},
     install_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.4'],
     test_suite='nose.collector',
+    cmdclass={'build_ext': CustomBuildExt},
     tests_require=['nose']
 )

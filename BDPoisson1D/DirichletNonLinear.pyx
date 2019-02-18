@@ -143,7 +143,7 @@ cpdef dirichlet_non_linear_poisson_solver_mesh(Mesh1DUniform mesh, Function y0, 
     :return: mesh with solution y = y0 + w * Dy, and residual; callable solution function; Dy.
     """
     cdef:
-        double[:] physical_nodes = mesh.to_physical(mesh.__local_nodes)
+        double[:] physical_nodes = mesh.to_physical_coordinate(mesh.__local_nodes)
         double[:] dy
     mesh, dy = dirichlet_non_linear_poisson_solver_mesh_arrays(mesh,
                                                                y0.evaluate(physical_nodes),
@@ -236,7 +236,7 @@ cpdef dirichlet_non_linear_poisson_solver_amr(double boundary_1, double boundary
             f.__f = y0
             df_ddy.__f = y0
             mesh.trim()
-            converged[mesh_id] = max(abs(mesh.residual)) < residual_threshold
+            converged[mesh_id] = max(abs(np.asarray(mesh.residual))) < residual_threshold
             if converged[mesh_id]:
                 continue
             refinement_points_chunks = points_for_refinement(mesh, mesh_refinement_threshold)
@@ -248,8 +248,8 @@ cpdef dirichlet_non_linear_poisson_solver_amr(double boundary_1, double boundary
                     idx1, idx2, mesh_crop = adjust_range(block, mesh.__num - 1, crop=[10, 10],
                                                          step_scale=meshes_tree.refinement_coefficient)
                     refinements.append(Mesh1DUniform(
-                        mesh.to_physical(np.array([mesh.__local_nodes[idx1]]))[0],
-                        mesh.to_physical(np.array([mesh.__local_nodes[idx2]]))[0],
+                        mesh.to_physical_coordinate(np.array([mesh.__local_nodes[idx1]]))[0],
+                        mesh.to_physical_coordinate(np.array([mesh.__local_nodes[idx2]]))[0],
                         boundary_condition_1=mesh.__solution[idx1],
                         boundary_condition_2=mesh.__solution[idx2],
                         physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,

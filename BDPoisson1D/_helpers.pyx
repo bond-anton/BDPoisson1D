@@ -43,7 +43,7 @@ cpdef list points_for_refinement(Mesh1DUniform mesh, double threshold):
     :return: arrays of bad nodes indices for refinement
     """
     cdef:
-        long[:] bad_nodes = np.sort(np.where(abs(mesh.residual) > threshold)[0])
+        long[:] bad_nodes = np.sort(np.where(abs(np.asarray(mesh.residual)) > threshold)[0])
         long[:] split_idx
     if bad_nodes.size > 0:
         split_idx = np.where(np.asarray(bad_nodes[1:]) - np.asarray(bad_nodes[:-1]) > 1)[0] + 1

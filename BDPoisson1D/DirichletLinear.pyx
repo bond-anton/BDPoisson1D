@@ -103,7 +103,7 @@ cpdef dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
     :param f: function f(x) callable on nodes array.
     :return: mesh with solution and residual.
     """
-    return dirichlet_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.to_physical(mesh.__local_nodes)))
+    return dirichlet_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.to_physical_coordinate(mesh.__local_nodes)))
 
 
 @boundscheck(False)
