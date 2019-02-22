@@ -1,16 +1,23 @@
-from __future__ import division, print_function
 import warnings
 import numpy as np
-from scipy.sparse import linalg, dia_matrix
 
 from cython cimport boundscheck, wraparound
+from cpython.array cimport array, clone
 
-from._helpers cimport trapz_1d
+from scipy.linalg.cython_lapack cimport dgtsv
+from libc.math cimport fabs
+
+from BDMesh.Mesh1DUniform cimport Mesh1DUniform
+from BDMesh.TreeMesh1DUniform cimport TreeMesh1DUniform
+
+from._helpers cimport trapz_1d, gradient1d, refinement_points
 from .Function cimport Function
 
 
-cpdef neumann_poisson_solver_arrays(double[:] nodes, double[:] f_nodes,
-                                    double bc1, double bc2, double j=1.0, double y0=0.0):
+@boundscheck(False)
+@wraparound(False)
+cpdef double[:, :] neumann_poisson_solver_arrays(double[:] nodes, double[:] f_nodes,
+                                                 double bc1, double bc2, double j=1.0, double y0=0.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -28,41 +35,43 @@ cpdef neumann_poisson_solver_arrays(double[:] nodes, double[:] f_nodes,
         residual: error of the solution.
     """
     cdef:
-        int i, n = nodes.size
+        int i, n = nodes.size, ns = n - 1, nrhs = 1, info
         double integral = trapz_1d(f_nodes, nodes)
-        double[:] y = np.zeros(n, dtype=np.double)
-        double[:] residual = np.zeros(n, dtype=np.double)
-        double[:] step = np.zeros(n - 1, dtype=np.double)
-        double[:] f = np.zeros(n - 1, dtype=np.double)
-        double[:] a = -2 * np.ones(n - 1, dtype=np.double)
-        double[:] b = np.ones(n - 1, dtype=np.double)
-        double[:] c = np.ones(n - 1, dtype=np.double)
-        double[:] dy, d2y, sol
-    if abs(integral - bc2 + bc1) > 1e-4:
+        array[double] f, d, dl, du, template = array('d')
+        double[:] d2y
+        double[:, :] result = np.empty((n, 2), dtype=np.double)
+    if fabs(integral - bc2 + bc1) > 1e-4:
         warnings.warn('Not well-posed! Redefine f function and boundary conditions or refine the mesh!')
-    with boundscheck(False), wraparound(False):
-        for i in range(n - 1):
-            step[i] = nodes[i + 1] - nodes[i]  # grid step
-            f[i] = (j * step[i]) ** 2 * f_nodes[i + 1]
-    f[0] += step[0] ** 2 * f_nodes[0] + 2 * step[0] * bc1 + y0
-    f[-1] -= 2 * step[-1] * bc2
-    a[0] = 0
-    b[-2] = 2
-    m = dia_matrix(([b, a, c], [-1, 0, 1]), (n - 1, n - 1), dtype=np.double).tocsr()
-    sol = linalg.spsolve(m, f, use_umfpack=True)
-    with boundscheck(False), wraparound(False):
-        for i in range(n - 1):
-            y[i + 1] = sol[i]
-    y[0] = y0
-    dy = np.gradient(y, nodes, edge_order=2) / j
-    d2y = np.gradient(dy, nodes, edge_order=2) / j
-    with boundscheck(False), wraparound(False):
-        for i in range(n):
-            residual[i] = f_nodes[i] - d2y[i]
-    return np.array(y), np.array(residual)
+    d = clone(template, n, zero=False)
+    dl = clone(template, n - 2, zero=False)
+    du = clone(template, n - 2, zero=False)
+    f = clone(template, n, zero=False)
+    result[0, 0] = bc1
+    result[n - 1, 0] = bc2
+    for i in range(n-1):
+        if i < n - 2:
+            dl[i] = 1.0
+            du[i] = 1.0
+        d[i] = -2.0
+        f[i] = (j * (nodes[i + 1] - nodes[i])) ** 2 * f_nodes[i + 1]
+    f[0] += (nodes[1] - nodes[0]) ** 2 * f_nodes[0] + 2 * (nodes[1] - nodes[0]) * bc1 + y0
+    f[n - 1] -= 2 * (nodes[n - 1] - nodes[n - 2]) * bc2
+    d[0] = 0
+    dl[n - 3] = 2
+    dgtsv(&ns, &nrhs, &dl[0], &d[0], &du[0], &f[0], &ns, &info)
+    for i in range(n):
+        result[i + 1, 0] = f[i]
+    result[0, 0] = y0
+    d2y = gradient1d(gradient1d(result[:, 0], nodes, n), nodes, n)
+    for i in range(n):
+        result[i, 1] = f_nodes[i] - d2y[i] / (j * j)
+    return result
 
 
-cpdef neumann_poisson_solver(double[:] nodes, Function f, double bc1, double bc2, double j=1.0, double y0=0.0):
+@boundscheck(False)
+@wraparound(True)
+cpdef double[:, :] neumann_poisson_solver(double[:] nodes, Function f,
+                                          double bc1, double bc2, double j=1.0, double y0=0.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -80,3 +89,73 @@ cpdef neumann_poisson_solver(double[:] nodes, Function f, double bc1, double bc2
         residual: error of the solution.
     """
     return neumann_poisson_solver_arrays(nodes, f.evaluate(nodes), bc1, bc2, j, y0)
+
+
+@boundscheck(False)
+@wraparound(True)
+cpdef void neumann_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_nodes, double y0=0.0):
+    result = neumann_poisson_solver_arrays(mesh.__local_nodes, f_nodes,
+                                           mesh.__boundary_condition_1, mesh.__boundary_condition_2,
+                                           mesh.j(), y0)
+    mesh.solution = result[:, 0]
+    mesh.residual = result[:, 1]
+
+
+@boundscheck(False)
+@wraparound(True)
+cpdef void neumann_poisson_solver_mesh(Mesh1DUniform mesh, Function f, double y0=0.0):
+    neumann_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.physical_nodes), y0)
+
+
+@boundscheck(False)
+@wraparound(True)
+cpdef void neumann_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function f, double y0=0.0,
+                                           int max_iter=1000, double threshold=1.0e-2, int max_level=10):
+    cdef:
+        int level, i = 0, j, converged
+        Mesh1DUniform mesh
+        int[:, :] refinements
+    while i < max_iter:
+        i += 1
+        level = max(meshes_tree.levels)
+        converged = 0
+        for mesh in meshes_tree.__tree[level]:
+            neumann_poisson_solver_mesh(mesh, f, y0)
+            mesh.trim()
+            refinements = refinement_points(mesh, threshold, crop_l=20, crop_r=20,
+                                            step_scale=meshes_tree.refinement_coefficient)
+            if refinements.shape[0] == 0:
+                converged += 1
+                continue
+            if level < max_level:
+                for j in range(refinements.shape[0]):
+                    meshes_tree.add_mesh(Mesh1DUniform(
+                        mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][0]],
+                        mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][1]],
+                        boundary_condition_1=mesh.__solution[refinements[j][0]],
+                        boundary_condition_2=mesh.__solution[refinements[j][1]],
+                        physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
+                        crop=[refinements[j][2], refinements[j][3]]))
+        meshes_tree.remove_coarse_duplicates()
+        if converged == len(meshes_tree.__tree[level]) or level == max_level:
+            break
+
+
+@boundscheck(False)
+@wraparound(True)
+cpdef TreeMesh1DUniform neumann_poisson_solver_amr(double boundary_1, double boundary_2, double step, Function f,
+                                                   double bc1, double bc2, double y0=0.0,
+                                                   int max_iter=1000, double threshold=1.0e-2, int max_level=10):
+    cdef:
+        Mesh1DUniform root_mesh, mesh
+        TreeMesh1DUniform meshes_tree
+        int level, mesh_id, idx1, idx2, i = 0
+        long[:] converged, block
+        list refinements, refinement_points_chunks, mesh_crop
+    root_mesh = Mesh1DUniform(boundary_1, boundary_2,
+                              boundary_condition_1=bc1,
+                              boundary_condition_2=bc2,
+                              physical_step=round(step, 9))
+    meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
+    neumann_poisson_solver_mesh_amr(meshes_tree, f, y0, max_iter, threshold, max_level)
+    return meshes_tree

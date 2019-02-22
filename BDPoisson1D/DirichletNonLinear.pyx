@@ -1,21 +1,21 @@
-from __future__ import division, print_function
 import numpy as np
-from scipy.sparse import dia_matrix
-from scipy.sparse.linalg import spsolve
 
 from cython cimport boundscheck, wraparound
+from cpython.array cimport array, clone
+
+from scipy.linalg.cython_lapack cimport dgtsv
 
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 from BDMesh.TreeMesh1DUniform cimport  TreeMesh1DUniform
-from ._helpers cimport fd_d2_matrix, adjust_range, points_for_refinement
+from ._helpers cimport gradient1d, refinement_points
 from .Function cimport Function, Functional, InterpolateFunction
 
 
 @boundscheck(False)
 @wraparound(False)
-cpdef dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, double[:] y0_nodes,
-                                                 double[:] f_nodes, double[:] df_ddy_nodes,
-                                                 double bc1, double bc2, double j=1.0, double w=1.0):
+cpdef double[:, :] dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, double[:] y0_nodes,
+                                                              double[:] f_nodes, double[:] df_ddy_nodes,
+                                                              double bc1, double bc2, double j=1.0, double w=1.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
@@ -34,42 +34,45 @@ cpdef dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, double[:] y0_n
     :return: solution y = y0 + w * Dy; Dy; residual.
     """
     cdef:
-        int i, n = nodes.size
-        double[:] step = np.zeros(n - 2, dtype=np.double)  # grid step
-        double[:] dy = np.zeros(n, dtype=np.double)  # solution vector
-        double[:] y = np.zeros(n, dtype=np.double)
-        double[:] residual = np.zeros(n, dtype=np.double)
-        double[:] a = np.zeros(n - 2, dtype=np.double)
-        double[:] f = np.zeros(n - 2, dtype=np.double)
-        double[:] b, sol
-    m1 = fd_d2_matrix(n - 2)
-    b = m1.dot(np.asarray(y0_nodes[1:n - 1]))
-    for i in range(n - 2):
-        step[i] = nodes[i + 1] - nodes[i]
-        a[i] = (j * step[i]) ** 2 * df_ddy_nodes[i + 1]
-        f[i] = (j * step[i]) ** 2 * f_nodes[i + 1] - b[i]
-    m = m1 - dia_matrix(([a], [0]), (n - 2, n - 2)).tocsr()
-    f[0] -= bc1
-    f[n - 3] -= bc2
-    dy[0] = bc1 - y0_nodes[0]
-    y[0] = y0_nodes[0] + w * dy[0]
-    dy[n - 1] = bc2 - y0_nodes[n - 1]
-    y[n - 1] = y0_nodes[n - 1] + w * dy[n - 1]
-    sol = spsolve(m, f, use_umfpack=True)
+        int i, n = nodes.size - 2, nrhs = 1, info
+        array[double] b, f, d, dl, du, template = array('d')
+        double[:, :] result = np.empty((n + 2, 3), dtype=np.double)
+    d = clone(template, n, zero=False)
+    dl = clone(template, n - 1, zero=False)
+    du = clone(template, n - 1, zero=False)
+    b = clone(template, n, zero=False)
+    f = clone(template, n, zero=False)
     for i in range(1, n - 1):
-        dy[i] = sol[i - 1]
-        y[i] = y0_nodes[i] + w * dy[i]
-    d_y0 = np.gradient(y0_nodes, nodes, edge_order=2) / j
-    d2_y0 = np.gradient(d_y0, nodes, edge_order=2) / j
-    d_dy = np.gradient(dy, nodes, edge_order=2) / j
-    d2_dy = np.gradient(d_dy, nodes, edge_order=2) / j
+        b[i] = y0_nodes[i] - 2.0 * y0_nodes[i + 1] + y0_nodes[i + 2]
+    b[0] = - 2.0 * y0_nodes[1] + y0_nodes[2]
+    b[n - 1] = y0_nodes[n - 1] -2.0 * y0_nodes[n]
     for i in range(n):
-        residual[i] = f_nodes[i] - d2_dy[i] - d2_y0[i]
-    return np.asarray(y), np.asarray(dy), np.asarray(residual)
+        if i < n - 1:
+            dl[i] = 1.0
+            du[i] = 1.0
+        d[i] = -2.0 - (j * (nodes[i + 1] - nodes[i])) ** 2 * df_ddy_nodes[i + 1]
+        f[i] = (j * (nodes[i + 1] - nodes[i])) ** 2 * f_nodes[i + 1] - b[i]
+    f[0] -= bc1
+    f[n - 1] -= bc2
+    result[0, 1] = bc1 - y0_nodes[0]
+    result[0, 0] = y0_nodes[0] + w * result[0, 1]
+    result[n + 1, 1] = bc2 - y0_nodes[n + 1]
+    result[n + 1, 0] = y0_nodes[n + 1] + w * result[n + 1, 1]
+    dgtsv(&n, &nrhs, &dl[0], &d[0], &du[0], &f[0], &n, &info)
+    for i in range(1, n + 1):
+        result[i, 1] = f[i - 1]
+        result[i, 0] = y0_nodes[i] + w * result[i, 1]
+    d2_y0 = gradient1d(gradient1d(y0_nodes, nodes, n + 2), nodes, n + 2)
+    d2_dy = gradient1d(gradient1d(result[:, 1], nodes, n + 2), nodes, n + 2)
+    for i in range(n + 2):
+        result[i, 2] = f_nodes[i] - (d2_dy[i] + d2_y0[i]) / (j * j)
+    return result
 
 
-cpdef dirichlet_non_linear_poisson_solver(double[:] nodes, Function y0, Functional f, Functional df_ddy,
-                                          double bc1, double bc2, double j=1.0, double w=1.0):
+@boundscheck(False)
+@wraparound(False)
+cpdef double[:, :] dirichlet_non_linear_poisson_solver(double[:] nodes, Function y0, Functional f, Functional df_ddy,
+                                                       double bc1, double bc2, double j=1.0, double w=1.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
@@ -87,19 +90,16 @@ cpdef dirichlet_non_linear_poisson_solver(double[:] nodes, Function y0, Function
     :param w: the weight for Dy (default w=1.0).
     :return: solution as callable function y = y0 + w * Dy; Dy; residual.
     """
-    cdef:
-        double[:] y_nodes, dy, residual
-        InterpolateFunction y
-    y_nodes, dy, residual = dirichlet_non_linear_poisson_solver_arrays(nodes, y0.evaluate(nodes),
-                                                                       f.evaluate(nodes), df_ddy.evaluate(nodes),
-                                                                       bc1, bc2, j, w)
-    y = InterpolateFunction(nodes, y_nodes)
-    return y, np.asarray(dy), np.asarray(residual)
+    return dirichlet_non_linear_poisson_solver_arrays(nodes, y0.evaluate(nodes),
+                                                      f.evaluate(nodes), df_ddy.evaluate(nodes),
+                                                      bc1, bc2, j, w)
 
 
-cpdef dirichlet_non_linear_poisson_solver_mesh_arrays(Mesh1DUniform mesh,
-                                                      double[:] y0_nodes, double[:] f_nodes,
-                                                      double[:] df_ddy_nodes, double w=1.0):
+@boundscheck(False)
+@wraparound(False)
+cpdef void dirichlet_non_linear_poisson_solver_mesh_arrays(Mesh1DUniform mesh,
+                                                           double[:] y0_nodes, double[:] f_nodes,
+                                                           double[:] df_ddy_nodes, double w=1.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
@@ -115,19 +115,20 @@ cpdef dirichlet_non_linear_poisson_solver_mesh_arrays(Mesh1DUniform mesh,
     :return: mesh with solution y = y0 + w * Dy, and residual; Dy.
     """
     cdef:
-        double[:] y_nodes, dy, residual
-    y_nodes, dy, residual = dirichlet_non_linear_poisson_solver_arrays(mesh.__local_nodes, y0_nodes, f_nodes,
-                                                                       df_ddy_nodes,
-                                                                       mesh.__boundary_condition_1,
-                                                                       mesh.__boundary_condition_2,
-                                                                       mesh.j(), w)
-    mesh.solution = y_nodes
-    mesh.residual = residual
-    return mesh, dy
+        double[:, :] result
+    result = dirichlet_non_linear_poisson_solver_arrays(mesh.__local_nodes, y0_nodes, f_nodes,
+                                                        df_ddy_nodes,
+                                                        mesh.__boundary_condition_1,
+                                                        mesh.__boundary_condition_2,
+                                                        mesh.j(), w)
+    mesh.solution = result[:, 0]
+    mesh.residual = result[:, 2]
 
 
-cpdef dirichlet_non_linear_poisson_solver_mesh(Mesh1DUniform mesh, Function y0, Functional f, Functional df_ddy,
-                                               double w=1.0):
+@boundscheck(False)
+@wraparound(False)
+cpdef void dirichlet_non_linear_poisson_solver_mesh(Mesh1DUniform mesh, Function y0, Functional f, Functional df_ddy,
+                                                    double w=1.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
@@ -144,20 +145,17 @@ cpdef dirichlet_non_linear_poisson_solver_mesh(Mesh1DUniform mesh, Function y0, 
     """
     cdef:
         double[:] physical_nodes = mesh.to_physical_coordinate(mesh.__local_nodes)
-        double[:] dy
-    mesh, dy = dirichlet_non_linear_poisson_solver_mesh_arrays(mesh,
-                                                               y0.evaluate(physical_nodes),
-                                                               f.evaluate(physical_nodes),
-                                                               df_ddy.evaluate(physical_nodes), w)
-    y = InterpolateFunction(physical_nodes, mesh.__solution)
-    return mesh, y, dy
+    dirichlet_non_linear_poisson_solver_mesh_arrays(mesh,
+                                                    y0.evaluate(physical_nodes),
+                                                    f.evaluate(physical_nodes),
+                                                    df_ddy.evaluate(physical_nodes), w)
 
 
 @boundscheck(False)
 @wraparound(False)
-cpdef dirichlet_non_linear_poisson_solver_recurrent_mesh(Mesh1DUniform mesh,
-                                                         Function y0, Functional f, Functional df_ddy,
-                                                         int max_iter=1000, double threshold=1e-7):
+cpdef void dirichlet_non_linear_poisson_solver_recurrent_mesh(Mesh1DUniform mesh,
+                                                              Function y0, Functional f, Functional df_ddy,
+                                                              int max_iter=1000, double threshold=1e-7):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
@@ -174,22 +172,71 @@ cpdef dirichlet_non_linear_poisson_solver_recurrent_mesh(Mesh1DUniform mesh,
     :param threshold: convergence residual error threshold.
     :return: mesh with solution y = y0 + w * Dy, and residual; callable solution function.
     """
-    cdef double[:] dy
     for i in range(max_iter):
-        mesh, y0, dy = dirichlet_non_linear_poisson_solver_mesh(mesh, y0, f, df_ddy)
-        if abs(mesh.integrational_residual) <= threshold or max(abs(np.asarray(dy))) <= 2 * np.finfo(np.float).eps:
+        dirichlet_non_linear_poisson_solver_mesh(mesh, y0, f, df_ddy)
+        if abs(mesh.integrational_residual) <= threshold:  # or max(abs(np.asarray(dy))) <= 2 * np.finfo(np.float).eps:
             break
+        y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)
         f.__f = y0
         df_ddy.__f = y0
-    return mesh, y0
+
 
 @boundscheck(False)
 @wraparound(False)
-cpdef dirichlet_non_linear_poisson_solver_amr(double boundary_1, double boundary_2, double step, Function y0,
-                                              Functional f, Functional df_ddy, double bc1, double bc2,
-                                              int max_iter=1000,
-                                              double residual_threshold=1e-3, double int_residual_threshold=1e-6,
-                                              int max_level=20, double mesh_refinement_threshold=1e-7):
+cpdef void dirichlet_non_linear_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree,
+                                                        Function y0, Functional f, Functional df_ddy,
+                                                        int max_iter=1000,
+                                                        double residual_threshold=1e-7,
+                                                        double int_residual_threshold=1e-6,
+                                                        int max_level=20, double mesh_refinement_threshold=1e-7):
+    cdef:
+        int level, i = 0, j, converged
+        Mesh1DUniform mesh
+        int[:, :] refinements
+    while i < max_iter:
+        print('LEVELS:', meshes_tree.levels)
+        i += 1
+        level = max(meshes_tree.levels)
+        converged = 0
+        for mesh in meshes_tree.__tree[level]:
+            dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh, y0, f, df_ddy,
+                                                               max_iter, int_residual_threshold)
+            y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)
+            f.__f = y0
+            df_ddy.__f = y0
+            mesh.trim()
+            refinements = refinement_points(mesh, residual_threshold, crop_l=20, crop_r=20,
+                                            step_scale=meshes_tree.refinement_coefficient)
+            print(np.asarray(refinements))
+            if refinements.shape[0] == 0:
+                converged += 1
+                continue
+            if level < max_level:
+                print('Refinement step:', mesh.physical_step/meshes_tree.refinement_coefficient)
+                for j in range(refinements.shape[0]):
+                    meshes_tree.add_mesh(Mesh1DUniform(
+                        mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][0]],
+                        mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][1]],
+                        boundary_condition_1=mesh.__solution[refinements[j][0]],
+                        boundary_condition_2=mesh.__solution[refinements[j][1]],
+                        physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
+                        crop=[refinements[j][2], refinements[j][3]]))
+        meshes_tree.remove_coarse_duplicates()
+        if converged == len(meshes_tree.__tree[level]) or level == max_level:
+            print('converged!')
+            break
+
+
+@boundscheck(False)
+@wraparound(False)
+cpdef TreeMesh1DUniform dirichlet_non_linear_poisson_solver_amr(double boundary_1, double boundary_2, double step,
+                                                                Function y0, Functional f, Functional df_ddy,
+                                                                double bc1, double bc2,
+                                                                int max_iter=1000,
+                                                                double residual_threshold=1e-3,
+                                                                double int_residual_threshold=1e-6,
+                                                                int max_level=20,
+                                                                double mesh_refinement_threshold=1e-7):
     """
         Solves 1D differential equation of the form
             d2y/dx2 = f(x, y(x))
@@ -225,38 +272,7 @@ cpdef dirichlet_non_linear_poisson_solver_amr(double boundary_1, double boundary
                               boundary_condition_2=bc2,
                               physical_step=round(step, 9))
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-    while i < max_iter:
-        i += 1
-        level = max(meshes_tree.levels)
-        converged = np.zeros(len(meshes_tree.__tree[level]), dtype=np.int)
-        refinements = []
-        for mesh_id, mesh in enumerate(meshes_tree.__tree[level]):
-            mesh, y0 = dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh, y0, f, df_ddy,
-                                                                          max_iter, int_residual_threshold)
-            f.__f = y0
-            df_ddy.__f = y0
-            mesh.trim()
-            converged[mesh_id] = max(abs(np.asarray(mesh.residual))) < residual_threshold
-            if converged[mesh_id]:
-                continue
-            refinement_points_chunks = points_for_refinement(mesh, mesh_refinement_threshold)
-            converged[mesh_id] = not len(refinement_points_chunks) > 0
-            if converged[mesh_id]:
-                continue
-            elif level < max_level:
-                for block in refinement_points_chunks:
-                    idx1, idx2, mesh_crop = adjust_range(block, mesh.__num - 1, crop=[10, 10],
-                                                         step_scale=meshes_tree.refinement_coefficient)
-                    refinements.append(Mesh1DUniform(
-                        mesh.to_physical_coordinate(np.array([mesh.__local_nodes[idx1]]))[0],
-                        mesh.to_physical_coordinate(np.array([mesh.__local_nodes[idx2]]))[0],
-                        boundary_condition_1=mesh.__solution[idx1],
-                        boundary_condition_2=mesh.__solution[idx2],
-                        physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
-                        crop=mesh_crop))
-        meshes_tree.remove_coarse_duplicates()
-        if np.asarray(converged).all() or level == max_level:
-            break
-        for refinement_mesh in refinements:
-            meshes_tree.add_mesh(refinement_mesh)
+    dirichlet_non_linear_poisson_solver_mesh_amr(meshes_tree, y0, f, df_ddy,
+                                                 max_iter, residual_threshold, int_residual_threshold,
+                                                 max_level, mesh_refinement_threshold)
     return meshes_tree

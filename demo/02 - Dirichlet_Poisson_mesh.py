@@ -28,7 +28,7 @@ mesh = Mesh1DUniform(start, stop,
                      boundary_condition_2=y.evaluate(np.array([stop])),
                      physical_step=0.02)
 
-mesh = dirichlet_poisson_solver_mesh(mesh, f)  # solve Poisson equation
+dirichlet_poisson_solver_mesh(mesh, f)  # solve Poisson equation
 
 dy_solution = np.gradient(mesh.solution, mesh.physical_nodes, edge_order=2)
 d2y_solution = np.gradient(dy_solution, mesh.physical_nodes, edge_order=2)

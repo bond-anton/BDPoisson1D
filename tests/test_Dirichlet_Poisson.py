@@ -1,5 +1,3 @@
-from __future__ import division, print_function
-import warnings
 import numpy as np
 
 from BDMesh import Mesh1DUniform
@@ -34,7 +32,7 @@ class TestDirichlet(unittest.TestCase):
         result_1 = np.asarray(dirichlet_poisson_solver_arrays(nodes, self.d2y_numeric.evaluate(nodes), bc1, bc2, j=1))
         nodes = np.linspace(start, stop, num=101, endpoint=True)
         result_2 = np.asarray(dirichlet_poisson_solver_arrays(nodes, self.d2y_numeric.evaluate(nodes), bc1, bc2, j=1))
-        self.assertTrue(max(abs(result_2[:, 1])) < max(abs(result_1[:, 1])))
+        self.assertTrue(max(abs(result_2[5:-5, 1])) < max(abs(result_1[5:-5, 1])))
 
     def test_dirichlet_poisson_solver(self):
         start = -1.0
