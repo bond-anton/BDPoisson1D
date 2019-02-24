@@ -1,4 +1,3 @@
-from __future__ import division, print_function
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -29,9 +28,9 @@ integral = np.trapz(f.evaluate(nodes), nodes)
 print(integral, bc2 - bc1)
 print(np.allclose(integral, bc2 - bc1))
 
-y_solution, residual = neumann_poisson_solver(nodes, f, bc1, bc2, y0=y.evaluate(np.asarray([start]))[0])
-dy_solution = np.gradient(y_solution, nodes, edge_order=2)
-d2y_solution = np.gradient(dy_solution, nodes, edge_order=2)
+result = neumann_poisson_solver(nodes, f, bc1, bc2, y0=y.evaluate(np.asarray([start]))[0])
+dy_solution = np.gradient(result[:, 0], nodes, edge_order=1)
+d2y_solution = np.gradient(dy_solution, nodes, edge_order=1)
 
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 ax1.plot(nodes, f.evaluate(nodes), 'r-', label='f(x)')
@@ -42,10 +41,10 @@ ax2.plot(nodes, dy_numeric.evaluate(nodes), 'r-', label='dy/dx')
 ax2.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
 ax2.legend()
 
-ax3.plot(nodes, y_solution, 'b-', label='solution')
+ax3.plot(nodes, result[:, 0], 'b-', label='solution')
 ax3.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
 ax3.legend()
 
-ax4.plot(nodes, residual, 'g-o', label='residual')
+ax4.plot(nodes, result[:, 1], 'g-o', label='residual')
 ax4.legend()
 plt.show()

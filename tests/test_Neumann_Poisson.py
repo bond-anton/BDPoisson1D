@@ -76,38 +76,59 @@ class TestNeumann(unittest.TestCase):
     def test_neumann_poisson_solver_mesh(self):
         start = -1.0
         stop = 2.0
+        bc1 = 0.0
+        bc2 = 3.0
         mesh_1 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
+                               # boundary_condition_1=0.0,
+                               # boundary_condition_2=0.0,
                                physical_step=0.02)
+        # dy = self.dy_numeric.evaluate(mesh_1.physical_nodes)
+        mesh_1.boundary_condition_1 = bc1
+        mesh_1.boundary_condition_2 = bc2
         neumann_poisson_solver_mesh_arrays(mesh_1, self.d2y_numeric.evaluate(mesh_1.physical_nodes))
         mesh_2 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
+                               # boundary_condition_1=0.0,
+                               # boundary_condition_2=0.0,
                                physical_step=0.01)
+        # dy = self.dy_numeric.evaluate(mesh_2.physical_nodes)
+        mesh_2.boundary_condition_1 = bc1
+        mesh_2.boundary_condition_2 = bc2
         neumann_poisson_solver_mesh_arrays(mesh_2, self.d2y_numeric.evaluate(mesh_2.physical_nodes))
         self.assertTrue(max(abs(np.asarray(mesh_2.residual[10:-10]))) < max(abs(np.asarray(mesh_1.residual[10:-10]))))
 
         mesh_1 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
+                               # boundary_condition_1=0.0,
+                               # boundary_condition_2=0.0,
                                physical_step=0.02)
+        # dy = self.dy_numeric.evaluate(mesh_1.physical_nodes)
+        mesh_1.boundary_condition_1 = bc1
+        mesh_1.boundary_condition_2 = bc2
         neumann_poisson_solver_mesh(mesh_1, self.d2y_numeric)
         mesh_2 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
+                               boundary_condition_1=0.0,
+                               boundary_condition_2=0.0,
                                physical_step=0.01)
+        # dy = self.dy_numeric.evaluate(mesh_2.physical_nodes)
+        mesh_2.boundary_condition_1 = bc1
+        mesh_2.boundary_condition_2 = bc2
         neumann_poisson_solver_mesh(mesh_2, self.d2y_numeric)
         self.assertTrue(max(abs(np.asarray(mesh_2.residual[10:-10]))) < max(abs(np.asarray(mesh_1.residual[10:-10]))))
 
     def test_neumann_poisson_solver_amr(self):
         start = 0.2
-        stop = 1.2
+        stop = 2.0
+        nodes = np.linspace(start, stop, num=5001, endpoint=True)
+        bc1 = self.dy_numeric.evaluate(nodes)[0]
+        bc2 = self.dy_numeric.evaluate(nodes)[-1]
+        integral = np.trapz(self.d2y_numeric.evaluate(nodes), nodes)
+        print('CHECK:', integral, bc2 - bc1)
+        print('PASS:', np.allclose(integral, bc2 - bc1))
         step = 0.00001
         threshold = 1e-2
         max_level = 15
+
         meshes = neumann_poisson_solver_amr(start, stop, step, self.d2y_numeric,
-                                            self.y.evaluate([start])[0], self.y.evaluate([stop])[0],
+                                            bc1, bc2, self.y.evaluate(nodes)[0],
                                             threshold, max_level=max_level)
         flat_mesh = meshes.flatten()
         if len(meshes.levels) < max_level:

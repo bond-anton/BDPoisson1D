@@ -1,7 +1,6 @@
 import numpy as np
-from scipy.sparse import dia_matrix
 
-from libc.math cimport floor, ceil, round
+from libc.math cimport fabs, ceil, round
 from cython cimport boundscheck, wraparound
 from cpython.array cimport array, clone
 
@@ -49,8 +48,9 @@ cdef double[:] gradient1d(double[:] y, double[:] x, int n):
 cdef int refinement_chunks(Mesh1DUniform mesh, double threshold):
     cdef:
         int i, last = -2, n = mesh.num, result = 0
+        double abs_threshold = fabs(threshold)
     for i in range(n):
-        if mesh.__residual[i] > threshold:
+        if fabs(mesh.__residual[i]) > abs_threshold:
             if i - last > 1:
                 result += 1
             last = i
@@ -62,13 +62,16 @@ cdef int refinement_chunks(Mesh1DUniform mesh, double threshold):
 cdef int[:, :] refinement_points(Mesh1DUniform mesh, double threshold,
                                  int crop_l=0, int crop_r=0, double step_scale=1.0):
     cdef:
-        int i, j = 0, last = -2, n = mesh.num, chunks = refinement_chunks(mesh, threshold)
+        double abs_threshold = fabs(threshold)
+        int i, j = 0, last = -2, n = mesh.num, chunks = refinement_chunks(mesh, abs_threshold)
         int idx_tmp, crop_tmp
         int[2] crop = [<int> ceil(crop_l / step_scale), <int> ceil(crop_r / step_scale)]
         int[:, :] result = np.empty((chunks, 4), dtype=np.int32)
+        bint closed = True
     for i in range(n):
-        if mesh.__residual[i] > threshold:
+        if fabs(mesh.__residual[i]) > abs_threshold:
             if i - last > 1:
+                closed = False
                 idx_tmp = i - crop[0]
                 crop_tmp = crop[0]
                 if idx_tmp < 0:
@@ -82,6 +85,7 @@ cdef int[:, :] refinement_points(Mesh1DUniform mesh, double threshold,
             last = i
 
         elif i - last == 1:
+            closed = True
             idx_tmp = last + crop[1]
             crop_tmp = crop[1]
             if idx_tmp > n-1:
@@ -92,20 +96,23 @@ cdef int[:, :] refinement_points(Mesh1DUniform mesh, double threshold,
             j += 1
             if idx_tmp == n - 1:
                 break
-    if j < chunks:
+    if not closed:
+        closed = True
         result[j, 1] = n - 1
         result[j, 3] = 0
+        j += 1
+    print('CHUNKS:', chunks, j)
     if result[0][0] == 1:
             result[0][0] = 0
-    for j in range(chunks):
-        if result[j][1] - result[j][0] == 0:
-            if result[j][0] > 0:
-                result[j][0] -= 1
+    for i in range(j):
+        if result[i][1] - result[i][0] == 0:
+            if result[i][0] > 0:
+                result[i][0] -= 1
             else:
-                result[j][1] += 1
-        if result[j][1] - result[j][0] == (result[j][2] + result[j][3]) / step_scale:
-            if result[j][2] > 0:
-                result[j][2] -= 1
-            if result[j][3] > 0:
-                result[j][3] -= 1
-    return result
+                result[i][1] += 1
+        if result[i][1] - result[i][0] == (result[i][2] + result[i][3]) / step_scale:
+            if result[i][2] > 0:
+                result[i][2] -= 1
+            if result[i][3] > 0:
+                result[i][3] -= 1
+    return result[:j]

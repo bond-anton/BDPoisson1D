@@ -1,6 +1,4 @@
-from __future__ import division, print_function
 import numpy as np
-
 
 from matplotlib import pyplot as plt
 
@@ -81,8 +79,11 @@ flat_grid = Meshes.flatten()
 for level in Meshes.levels:
     for mesh in Meshes.tree[level]:
         ax1.plot(mesh.physical_nodes, mesh.solution, colors[level] + '-')
-        dPsi = np.gradient(mesh.solution, mesh.physical_nodes, edge_order=2)
-        ax4.plot(mesh.physical_nodes, dPsi, colors[level] + '-')
+        try:
+            dPsi = np.gradient(mesh.solution, mesh.physical_nodes, edge_order=2)
+            ax4.plot(mesh.physical_nodes, dPsi, colors[level] + '-')
+        except ValueError:
+            pass
 
 ax2.plot(flat_grid.physical_nodes, flat_grid.residual, 'b-')
 plot_tree(Meshes, ax3)

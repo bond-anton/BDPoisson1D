@@ -119,14 +119,16 @@ cpdef void dirichlet_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Func
     :param max_level: max level of mesh refinement.
     """
     cdef:
-        int level, i = 0, j, converged
+        int level, i = 0, j, converged, n
         Mesh1DUniform mesh
         int[:, :] refinements
     while i < max_iter:
         i += 1
         level = max(meshes_tree.levels)
         converged = 0
+        n = 0
         for mesh in meshes_tree.__tree[level]:
+            n += 1
             dirichlet_poisson_solver_mesh(mesh, f)
             mesh.trim()
             refinements = refinement_points(mesh, threshold, crop_l=20, crop_r=20,
@@ -144,7 +146,7 @@ cpdef void dirichlet_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Func
                         physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
                         crop=[refinements[j][2], refinements[j][3]]))
         meshes_tree.remove_coarse_duplicates()
-        if converged == len(meshes_tree.__tree[level]) or level == max_level:
+        if converged == n or level == max_level:
             break
 
 

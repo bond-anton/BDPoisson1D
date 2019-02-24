@@ -93,51 +93,63 @@ cpdef double[:, :] neumann_poisson_solver(double[:] nodes, Function f,
 
 @boundscheck(False)
 @wraparound(True)
-cpdef void neumann_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_nodes, double y0=0.0):
+cpdef void neumann_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_nodes):
+    cdef:
+        double[:, :] result
+    print(np.asarray(mesh.__local_nodes))
+    print(mesh.j())
     result = neumann_poisson_solver_arrays(mesh.__local_nodes, f_nodes,
                                            mesh.__boundary_condition_1, mesh.__boundary_condition_2,
-                                           mesh.j(), y0)
-    mesh.solution = result[:, 0]
-    mesh.residual = result[:, 1]
+                                           mesh.j(), mesh.__solution[0])
+    mesh.__solution = result[:, 0]
+    mesh.__residual = result[:, 1]
 
 
 @boundscheck(False)
 @wraparound(True)
-cpdef void neumann_poisson_solver_mesh(Mesh1DUniform mesh, Function f, double y0=0.0):
-    neumann_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.physical_nodes), y0)
+cpdef void neumann_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
+    neumann_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.physical_nodes))
 
 
 @boundscheck(False)
 @wraparound(True)
-cpdef void neumann_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function f, double y0=0.0,
+cpdef void neumann_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function f,
                                            int max_iter=1000, double threshold=1.0e-2, int max_level=10):
     cdef:
-        int level, i = 0, j, converged
+        int level, i = 0, j, converged, n
         Mesh1DUniform mesh
         int[:, :] refinements
+        Mesh1DUniform refinement_mesh
+        double[:] dy
     while i < max_iter:
         i += 1
         level = max(meshes_tree.levels)
         converged = 0
+        n = 0
         for mesh in meshes_tree.__tree[level]:
-            neumann_poisson_solver_mesh(mesh, f, y0)
+            n += 1
+            neumann_poisson_solver_mesh(mesh, f)
             mesh.trim()
+            dy = gradient1d(mesh.__solution, mesh.__local_nodes, mesh.num)
             refinements = refinement_points(mesh, threshold, crop_l=20, crop_r=20,
                                             step_scale=meshes_tree.refinement_coefficient)
+            print(np.asarray(refinements))
             if refinements.shape[0] == 0:
                 converged += 1
                 continue
             if level < max_level:
                 for j in range(refinements.shape[0]):
-                    meshes_tree.add_mesh(Mesh1DUniform(
+                    refinement_mesh = Mesh1DUniform(
                         mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][0]],
                         mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][1]],
-                        boundary_condition_1=mesh.__solution[refinements[j][0]],
-                        boundary_condition_2=mesh.__solution[refinements[j][1]],
+                        boundary_condition_1=dy[refinements[j][0]] / mesh.j(),
+                        boundary_condition_2=dy[refinements[j][1]] / mesh.j(),
                         physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
-                        crop=[refinements[j][2], refinements[j][3]]))
+                        crop=[refinements[j][2], refinements[j][3]])
+                    refinement_mesh.__solution[0] = mesh.__solution[refinements[j][0]]
+                    meshes_tree.add_mesh(refinement_mesh)
         meshes_tree.remove_coarse_duplicates()
-        if converged == len(meshes_tree.__tree[level]) or level == max_level:
+        if converged == n or level == max_level:
             break
 
 
@@ -156,6 +168,7 @@ cpdef TreeMesh1DUniform neumann_poisson_solver_amr(double boundary_1, double bou
                               boundary_condition_1=bc1,
                               boundary_condition_2=bc2,
                               physical_step=round(step, 9))
+    root_mesh.__solution = np.ones(root_mesh.num, dtype=np.double) * y0
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-    neumann_poisson_solver_mesh_amr(meshes_tree, f, y0, max_iter, threshold, max_level)
+    neumann_poisson_solver_mesh_amr(meshes_tree, f, max_iter, threshold, max_level)
     return meshes_tree

@@ -1,9 +1,8 @@
-from __future__ import division, print_function
 import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_non_linear_poisson_solver
-from BDPoisson1D import Function, Functional, NumericDiff
+from BDPoisson1D import Function, Functional, InterpolateFunction
 
 
 class TestFunction(Function):
@@ -72,7 +71,12 @@ plt.draw()
 
 for i in range(100):
     print(i + 1)
-    Psi, DPsi, R = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdDPsi, bc1=bc1, bc2=bc2, j=1.0)
+    result = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdDPsi, bc1=bc1, bc2=bc2, j=1.0)
+    Psi = InterpolateFunction(nodes, result[:, 0])
+    f.f = Psi
+    dfdDPsi.f = Psi
+    DPsi = result[:, 1]
+    R = result[:, 2]
     dPsi = np.gradient(Psi.evaluate(nodes), nodes, edge_order=2)
     d2Psi = np.gradient(dPsi, nodes, edge_order=2)
     Psi_line.set_ydata(Psi.evaluate(nodes))
