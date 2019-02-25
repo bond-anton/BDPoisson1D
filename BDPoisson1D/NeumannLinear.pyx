@@ -96,8 +96,6 @@ cpdef double[:, :] neumann_poisson_solver(double[:] nodes, Function f,
 cpdef void neumann_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_nodes):
     cdef:
         double[:, :] result
-    print(np.asarray(mesh.__local_nodes))
-    print(mesh.j())
     result = neumann_poisson_solver_arrays(mesh.__local_nodes, f_nodes,
                                            mesh.__boundary_condition_1, mesh.__boundary_condition_2,
                                            mesh.j(), mesh.__solution[0])
@@ -131,13 +129,12 @@ cpdef void neumann_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Functi
             neumann_poisson_solver_mesh(mesh, f)
             mesh.trim()
             dy = gradient1d(mesh.__solution, mesh.__local_nodes, mesh.num)
-            refinements = refinement_points(mesh, threshold, crop_l=20, crop_r=20,
+            refinements = refinement_points(mesh, threshold, crop_l=100, crop_r=100,
                                             step_scale=meshes_tree.refinement_coefficient)
-            print(np.asarray(refinements))
             if refinements.shape[0] == 0:
                 converged += 1
                 continue
-            if level < max_level:
+            if level < max_level and i < max_iter:
                 for j in range(refinements.shape[0]):
                     refinement_mesh = Mesh1DUniform(
                         mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][0]],

@@ -101,7 +101,6 @@ cdef int[:, :] refinement_points(Mesh1DUniform mesh, double threshold,
         result[j, 1] = n - 1
         result[j, 3] = 0
         j += 1
-    print('CHUNKS:', chunks, j)
     if result[0][0] == 1:
             result[0][0] = 0
     for i in range(j):

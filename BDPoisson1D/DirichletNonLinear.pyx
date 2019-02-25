@@ -194,7 +194,6 @@ cpdef void dirichlet_non_linear_poisson_solver_mesh_amr(TreeMesh1DUniform meshes
         Mesh1DUniform mesh
         int[:, :] refinements
     while i < max_iter:
-        print('LEVELS:', meshes_tree.levels)
         i += 1
         level = max(meshes_tree.levels)
         converged = 0
@@ -209,12 +208,10 @@ cpdef void dirichlet_non_linear_poisson_solver_mesh_amr(TreeMesh1DUniform meshes
             mesh.trim()
             refinements = refinement_points(mesh, residual_threshold, crop_l=20, crop_r=20,
                                             step_scale=meshes_tree.refinement_coefficient)
-            print(np.asarray(refinements))
             if refinements.shape[0] == 0:
                 converged += 1
                 continue
-            if level < max_level:
-                print('Refinement step:', mesh.physical_step/meshes_tree.refinement_coefficient)
+            if level < max_level and i < max_iter:
                 for j in range(refinements.shape[0]):
                     meshes_tree.add_mesh(Mesh1DUniform(
                         mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][0]],
@@ -225,7 +222,6 @@ cpdef void dirichlet_non_linear_poisson_solver_mesh_amr(TreeMesh1DUniform meshes
                         crop=[refinements[j][2], refinements[j][3]]))
         meshes_tree.remove_coarse_duplicates()
         if converged == n or level == max_level:
-            print('converged!')
             break
 
 

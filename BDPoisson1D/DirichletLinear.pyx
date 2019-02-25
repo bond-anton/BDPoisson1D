@@ -87,6 +87,8 @@ cpdef void dirichlet_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_
     :param mesh: BDMesh to solve on.
     :param f_nodes: 1D array of values of f(x) on nodes array. Must be same shape as nodes.
     """
+    cdef:
+        double[:, :] result
     result = dirichlet_poisson_solver_arrays(mesh.__local_nodes, f_nodes,
                                              mesh.__boundary_condition_1, mesh.__boundary_condition_2,
                                              mesh.j())
@@ -136,7 +138,7 @@ cpdef void dirichlet_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Func
             if refinements.shape[0] == 0:
                 converged += 1
                 continue
-            if level < max_level:
+            if level < max_level and i < max_iter:
                 for j in range(refinements.shape[0]):
                     meshes_tree.add_mesh(Mesh1DUniform(
                         mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][0]],
