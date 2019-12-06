@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 from scipy.interpolate import interp1d
 
-from BDPoisson1D.Function import Function, InterpolateFunction, Functional, NumericDiff
+from BDPoisson1D.Function import Function, InterpolateFunction, Functional, NumericGradient
 
 import unittest
 
@@ -46,9 +46,6 @@ class TestFunction(unittest.TestCase):
             def __init__(self, f):
                 super(test_Functional, self).__init__(f)
 
-            def evaluate(self, x):
-                return self.f.evaluate(x)
-
         f = test_Functional(test_F1())
         x = np.arange(100, dtype=np.float)
         np.testing.assert_allclose(f.evaluate(x), np.sqrt(x))
@@ -56,10 +53,17 @@ class TestFunction(unittest.TestCase):
         np.testing.assert_allclose(f.evaluate(x), np.sin(x))
 
     def test_numeric_diff(self):
+
         class test_F(Function):
             def evaluate(self, x):
                 return np.sin(x)
 
-        f = NumericDiff(test_F())
+        f = test_F()
+        df = NumericGradient(f)
         x = np.linspace(0.0, 2 * np.pi, num=501, dtype=np.float)
-        np.testing.assert_allclose(f.evaluate(x), np.cos(x), atol=1e-4)
+        np.testing.assert_allclose(df.evaluate(x), np.cos(x), atol=1e-4)
+
+        y = np.sin(x)
+        f = InterpolateFunction(x, y)
+        df = NumericGradient(f)
+        np.testing.assert_allclose(df.evaluate(x), np.cos(x), atol=1e-4)

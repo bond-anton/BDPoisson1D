@@ -4,7 +4,7 @@ from BDMesh import Mesh1DUniform
 from BDPoisson1D.DirichletLinear import dirichlet_poisson_solver_arrays, dirichlet_poisson_solver
 from BDPoisson1D.DirichletLinear import dirichlet_poisson_solver_mesh_arrays, dirichlet_poisson_solver_mesh
 from BDPoisson1D.DirichletLinear import dirichlet_poisson_solver_amr
-from BDPoisson1D.Function import Function, NumericDiff
+from BDPoisson1D.Function import Function, NumericGradient
 
 import unittest
 
@@ -18,8 +18,8 @@ class TestDirichlet(unittest.TestCase):
 
     def setUp(self):
         self.y = TestFunction()
-        self.dy_numeric = NumericDiff(self.y)
-        self.d2y_numeric = NumericDiff(self.dy_numeric)
+        self.dy_numeric = NumericGradient(self.y)
+        self.d2y_numeric = NumericGradient(self.dy_numeric)
 
     def test_dirichlet_poisson_solver_arrays(self):
         start = -1.0

@@ -192,14 +192,14 @@ class TestDirichletNL(unittest.TestCase):
         mesh_refinement_threshold = 1e-7
         max_iter = 1000
         max_level = 20
-        print('start')
+        # print('start')
         Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdDPsi, bc1, bc2,
                                                          max_iter=max_iter, residual_threshold=residual_threshold,
                                                          int_residual_threshold=int_residual_threshold,
                                                          max_level=max_level,
                                                          mesh_refinement_threshold=mesh_refinement_threshold)
         flat_grid = Meshes.flatten()
-        print(max(abs(np.asarray(flat_grid.residual))), residual_threshold, Meshes.levels)
+        # print(max(abs(np.asarray(flat_grid.residual))), residual_threshold, Meshes.levels)
         if len(Meshes.levels) < max_level:
             self.assertTrue(flat_grid.integrational_residual < int_residual_threshold)
             self.assertTrue(max(abs(np.asarray(flat_grid.residual))) < residual_threshold)

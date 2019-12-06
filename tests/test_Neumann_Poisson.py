@@ -5,7 +5,7 @@ from BDMesh import Mesh1DUniform
 from BDPoisson1D.NeumannLinear import neumann_poisson_solver_arrays, neumann_poisson_solver
 from BDPoisson1D.NeumannLinear import neumann_poisson_solver_mesh, neumann_poisson_solver_mesh_arrays
 from BDPoisson1D.NeumannLinear import neumann_poisson_solver_amr
-from BDPoisson1D.Function import Function, NumericDiff
+from BDPoisson1D.Function import Function, NumericGradient
 
 import unittest
 
@@ -19,8 +19,8 @@ class TestNeumann(unittest.TestCase):
 
     def setUp(self):
         self.y = TestFunction()
-        self.dy_numeric = NumericDiff(self.y)
-        self.d2y_numeric = NumericDiff(self.dy_numeric)
+        self.dy_numeric = NumericGradient(self.y)
+        self.d2y_numeric = NumericGradient(self.dy_numeric)
 
     def test_neumann_poisson_solver_arrays(self):
         start = 0.0
@@ -121,8 +121,8 @@ class TestNeumann(unittest.TestCase):
         bc1 = self.dy_numeric.evaluate(nodes)[0]
         bc2 = self.dy_numeric.evaluate(nodes)[-1]
         integral = np.trapz(self.d2y_numeric.evaluate(nodes), nodes)
-        print('CHECK:', integral, bc2 - bc1)
-        print('PASS:', np.allclose(integral, bc2 - bc1))
+        # print('CHECK:', integral, bc2 - bc1)
+        # print('PASS:', np.allclose(integral, bc2 - bc1))
         step = 0.00001
         threshold = 1e-2
         max_level = 15
