@@ -4,7 +4,7 @@ from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
 
 from codecs import open
-from os import path
+from os import path, remove
 import re
 
 
@@ -52,11 +52,11 @@ extensions = [
     ),
 ]
 
-copt = {'msvc': ['/Ox', '/fp:fast', '/favor:INTEL64', '/Og'],
-        'mingw32': ['-O3', '-ffast-math', '-march=native'],
-        'unix': ['-O3', '-ffast-math', '-march=native']}
-lopt = {'mingw32': [''],
-        'unix': ['']}
+copt = {'msvc': ['/openmp', '/Ox', '/fp:fast', '/favor:INTEL64', '/Og'],
+        'mingw32': ['-fopenmp', '-O3', '-ffast-math', '-march=native'],
+        'unix': ['-fopenmp', '-O3', '-ffast-math', '-march=native']}
+lopt = {'mingw32': ['-fopenmp'],
+        'unix': ['-fopenmp']}
 
 
 # check whether compiler supports a flag
@@ -66,7 +66,9 @@ def has_flag(compiler, flagname):
     with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
         f.write('int main (int argc, char **argv) { return 0; }')
         try:
-            compiler.compile([f.name], extra_postargs=[flagname])
+            res = compiler.compile([f.name], extra_postargs=[flagname])
+            for item in res:
+                remove(item)
         except CompileError:
             return False
     return True
@@ -118,6 +120,7 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.7',
     ],
 
