@@ -12,22 +12,28 @@ class TestFunction(Function):
     def evaluate(self, x):
         return -10 * np.sin(np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
 
-y = TestFunction()
-dy_numeric = NumericGradient(y)
-d2y_numeric = NumericGradient(dy_numeric)
 
-f = NumericGradient(y)
+class MixFunction(Function):
+    """
+    Some known differentiable function
+    """
+    def evaluate(self, x):
+        return np.ones(x.shape[0], dtype=np.double)
+
+
+y = TestFunction()
+p = MixFunction()
+dy_numeric = NumericGradient(y)
 
 start = -1.0
 stop = 2.0
 
-nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
-p_nodes = np.zeros(nodes.shape[0], dtype=np.double)
-f_nodes = f.evaluate(nodes)
-bc1 = y.evaluate(np.array([start]))[0]  # left Dirichlet boundary condition
-bc2 = y.evaluate(np.array([stop]))[0]  # right Dirichlet boundary condition
+nodes = np.linspace(start, stop, num=101, endpoint=True)  # generate nodes
+p_nodes = p.evaluate(nodes)
+f_nodes = dy_numeric.evaluate(nodes) + p_nodes * y.evaluate(nodes)
+ic = y.evaluate(np.array([start]))[0]  # left Dirichlet boundary condition
 
-result = dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes, bc1, bc2, j=1.0)  # solve Poisson equation
+result = dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes, ic, j=1.0)  # solve Poisson equation
 
 dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
 d2y_solution = np.gradient(dy_solution, nodes, edge_order=2)
