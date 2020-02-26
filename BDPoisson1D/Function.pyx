@@ -77,10 +77,10 @@ cdef class NumericGradient(Functional):
             array[double] y, template = array('d')
             double[:] dy
         if not isinstance(self.__f, InterpolateFunction):
-            return gradient1d(self.__f.evaluate(x), x, n)
+            return gradient1d(self.__f.evaluate(x), x)
         else:
             y = clone(template, n, zero=False)
-            dy = gradient1d(self.__f.y, self.__f.x, self.__f.n)
+            dy = gradient1d(self.__f.y, self.__f.x)
             for i in range(n):
                 while x[i] > self.__f.x[j] and j < self.__f.n - 1:
                     j += 1

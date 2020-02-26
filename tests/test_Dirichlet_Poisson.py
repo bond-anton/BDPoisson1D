@@ -32,7 +32,7 @@ class TestDirichlet(unittest.TestCase):
         result_1 = np.asarray(dirichlet_poisson_solver_arrays(nodes, self.d2y_numeric.evaluate(nodes), bc1, bc2, j=1))
         nodes = np.linspace(start, stop, num=101, endpoint=True)
         result_2 = np.asarray(dirichlet_poisson_solver_arrays(nodes, self.d2y_numeric.evaluate(nodes), bc1, bc2, j=1))
-        self.assertTrue(max(abs(result_2[5:-5, 1])) < max(abs(result_1[5:-5, 1])))
+        self.assertTrue(np.mean(result_2[5:-5, 1]) < np.mean(result_1[5:-5, 1]))
 
     def test_dirichlet_poisson_solver(self):
         start = -1.0
@@ -45,7 +45,7 @@ class TestDirichlet(unittest.TestCase):
         result_1 = np.asarray(dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0))
         nodes = np.linspace(start, stop, num=101, endpoint=True)
         result_2 = np.asarray(dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0))
-        self.assertTrue(max(abs(result_2[:, 1])) < max(abs(result_1[:, 1])))
+        self.assertTrue(np.mean(result_2[:, 1]) < np.mean(result_1[:, 1]))
 
     def test_dirichlet_poisson_solver_mesh(self):
         start = -1.0
@@ -60,7 +60,7 @@ class TestDirichlet(unittest.TestCase):
                                boundary_condition_2=self.y.evaluate([stop])[0],
                                physical_step=0.01)
         dirichlet_poisson_solver_mesh_arrays(mesh_2, self.d2y_numeric.evaluate(mesh_2.physical_nodes))
-        self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
+        self.assertTrue(np.mean(np.asarray(mesh_2.residual)) < np.mean(np.asarray(mesh_1.residual)))
 
         mesh_1 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y.evaluate([start])[0],
@@ -72,7 +72,7 @@ class TestDirichlet(unittest.TestCase):
                                boundary_condition_2=self.y.evaluate([stop])[0],
                                physical_step=0.01)
         dirichlet_poisson_solver_mesh(mesh_2, self.d2y_numeric)
-        self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
+        self.assertTrue(np.mean(np.asarray(mesh_2.residual)) < np.mean(np.asarray(mesh_1.residual)))
 
     def test_dirichlet_poisson_solver_amr(self):
         start = 0.2

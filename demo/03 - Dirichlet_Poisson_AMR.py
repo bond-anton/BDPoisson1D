@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_poisson_solver_amr
-from BDPoisson1D import Function, NumericDiff
+from BDPoisson1D import Function, NumericGradient
 
 
 class TestFunction(Function):
@@ -14,10 +14,10 @@ class TestFunction(Function):
 
 
 y = TestFunction()
-dy_numeric = NumericDiff(y)
-d2y_numeric = NumericDiff(dy_numeric)
+dy_numeric = NumericGradient(y)
+d2y_numeric = NumericGradient(dy_numeric)
 
-f = NumericDiff(dy_numeric)
+f = NumericGradient(dy_numeric)
 
 
 def plot_tree(mesh_tree, axes=None):

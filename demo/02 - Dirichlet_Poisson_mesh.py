@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_poisson_solver_mesh
-from BDPoisson1D import Function, NumericDiff
+from BDPoisson1D import Function, NumericGradient
 from BDMesh import Mesh1DUniform
 
 
@@ -15,10 +15,10 @@ class TestFunction(Function):
 
 
 y = TestFunction()
-dy_numeric = NumericDiff(y)
-d2y_numeric = NumericDiff(dy_numeric)
+dy_numeric = NumericGradient(y)
+d2y_numeric = NumericGradient(dy_numeric)
 
-f = NumericDiff(dy_numeric)
+f = NumericGradient(dy_numeric)
 
 start = -1.0
 stop = 2.0

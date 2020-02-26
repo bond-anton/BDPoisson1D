@@ -20,9 +20,24 @@ cdef double trapz_1d(double[:] y, double[:] x):
 
 @boundscheck(False)
 @wraparound(False)
-cdef double[:] gradient1d(double[:] y, double[:] x, int n):
+cdef double[:] interp_1d(double[:] x_new, double[:] x, double[:] y):
     cdef:
-        int i
+        int n = x_new.shape[0], m = x.shape[0]
+        int i, j = 1
+        array[double] y_new, template = array('d')
+    y_new = clone(template, n, zero=False)
+    for i in range(n):
+        while x_new[i] > x[j] and j < m - 1:
+            j += 1
+        y_new[i] = y[j-1] + (x_new[i] - x[j-1]) * (y[j] - y[j-1]) / (x[j] - x[j-1])
+    return y_new
+
+
+@boundscheck(False)
+@wraparound(False)
+cdef double[:] gradient1d(double[:] y, double[:] x):
+    cdef:
+        int i, n = x.shape[0]
         double a, b, c, dx1, dx2
         array[double] result, template = array('d')
     result = clone(template, n, zero=False)

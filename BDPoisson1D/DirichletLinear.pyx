@@ -51,7 +51,7 @@ cpdef double[:, :] dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_
     dgtsv(&n, &nrhs, &dl[0], &d[0], &du[0], &f[0], &n, &info)
     for i in range(n):
         result[i + 1, 0] = f[i]
-    d2y = gradient1d(gradient1d(result[:, 0], nodes, n + 2), nodes, n + 2)
+    d2y = gradient1d(gradient1d(result[:, 0], nodes), nodes)
     for i in range(n + 2):
         result[i, 1] = f_nodes[i] - d2y[i] / (j * j)
     return result

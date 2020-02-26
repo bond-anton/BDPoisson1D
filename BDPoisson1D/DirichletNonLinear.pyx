@@ -62,8 +62,8 @@ cpdef double[:, :] dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, d
     for i in range(1, n + 1):
         result[i, 1] = f[i - 1]
         result[i, 0] = y0_nodes[i] + w * result[i, 1]
-    d2_y0 = gradient1d(gradient1d(y0_nodes, nodes, n + 2), nodes, n + 2)
-    d2_dy = gradient1d(gradient1d(result[:, 1], nodes, n + 2), nodes, n + 2)
+    d2_y0 = gradient1d(gradient1d(y0_nodes, nodes), nodes)
+    d2_dy = gradient1d(gradient1d(result[:, 1], nodes), nodes)
     for i in range(n + 2):
         result[i, 2] = f_nodes[i] - (d2_dy[i] + d2_y0[i]) / (j * j)
     return result

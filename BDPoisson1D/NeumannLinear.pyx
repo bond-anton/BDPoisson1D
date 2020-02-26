@@ -62,7 +62,7 @@ cpdef double[:, :] neumann_poisson_solver_arrays(double[:] nodes, double[:] f_no
     for i in range(n):
         result[i + 1, 0] = f[i]
     result[0, 0] = y0
-    d2y = gradient1d(gradient1d(result[:, 0], nodes, n), nodes, n)
+    d2y = gradient1d(gradient1d(result[:, 0], nodes), nodes)
     for i in range(n):
         result[i, 1] = f_nodes[i] - d2y[i] / (j * j)
     return result
@@ -128,7 +128,7 @@ cpdef void neumann_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Functi
             n += 1
             neumann_poisson_solver_mesh(mesh, f)
             mesh.trim()
-            dy = gradient1d(mesh.__solution, mesh.__local_nodes, mesh.num)
+            dy = gradient1d(mesh.__solution, mesh.__local_nodes)
             refinements = refinement_points(mesh, threshold, crop_l=100, crop_r=100,
                                             step_scale=meshes_tree.refinement_coefficient)
             if refinements.shape[0] == 0:

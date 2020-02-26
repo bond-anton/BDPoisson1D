@@ -55,7 +55,64 @@ cpdef double[:, :] dirichlet_first_order_solver_arrays(double[:] nodes, double[:
     result[n - 1, 0] = bc2
     for i in range(nn):
         result[i + 1, 0] = f[i]
-    dy = gradient1d(result[:, 0], nodes, n)
+    dy = gradient1d(result[:, 0], nodes)
     for i in range(n):
         result[i, 1] = f_nodes[i] - dy[i] / j - p_nodes[i] * result[i, 0]
     return result
+
+
+@boundscheck(False)
+cpdef double[:, :] dirichlet_first_order_solver(double[:] nodes, Function p, Function f,
+                                                double bc1, double bc2, double j=1.0):
+    """
+    Solves 1D differential equation of the form
+        dy/dx + p(x)*y = f(x)
+        y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
+    using FDE algorithm of O(h2) precision.
+
+    :param nodes: 1D array of x nodes. Must include boundary points.
+    :param p: function p(x) callable on nodes array.
+    :param f: function f(x) callable on nodes array.
+    :param bc1: boundary condition at nodes[0] point (a number).
+    :param bc2: boundary condition at nodes[n] point (a number).
+    :param j: Jacobian.
+    :return:
+        y: 1D array of solution function y(x) values on nodes array.
+        residual: error of the solution.
+    """
+    return dirichlet_first_order_solver_arrays(nodes, p.evaluate(nodes), f.evaluate(nodes), bc1, bc2, j)
+
+
+@boundscheck(False)
+cpdef void dirichlet_first_order_solver_mesh_arrays(Mesh1DUniform mesh, double[:] p_nodes, double[:] f_nodes):
+    """
+    Solves 1D differential equation of the form
+        d2y/dx2 = f(x)
+        y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
+    using FDE algorithm of O(h2) precision.
+
+    :param mesh: BDMesh to solve on.
+    :param p_nodes: 1D array of values of p(x) on nodes array. Must be same shape as nodes.
+    :param f_nodes: 1D array of values of f(x) on nodes array. Must be same shape as nodes.
+    """
+    cdef:
+        double[:, :] result
+    result = dirichlet_first_order_solver_arrays(mesh.__local_nodes, p_nodes, f_nodes,
+                                                 mesh.__boundary_condition_1, mesh.__boundary_condition_2,
+                                                 mesh.j())
+    mesh.solution = result[:, 0]
+    mesh.residual = result[:, 1]
+
+
+cpdef void dirichlet_first_order_solver_mesh(Mesh1DUniform mesh, Function p, Function f):
+    """
+    Solves 1D differential equation of the form
+        d2y/dx2 = f(x)
+        y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
+    using FDE algorithm of O(h2) precision.
+
+    :param mesh: BDMesh to solve on.
+    :param p: function p(x) callable on nodes array.
+    :param f: function f(x) callable on nodes array.
+    """
+    dirichlet_first_order_solver_mesh_arrays(mesh, p.evaluate(mesh.physical_nodes), f.evaluate(mesh.physical_nodes))

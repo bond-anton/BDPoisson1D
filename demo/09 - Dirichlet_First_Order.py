@@ -10,7 +10,15 @@ class TestFunction(Function):
     Some known differentiable function
     """
     def evaluate(self, x):
-        return -10 * np.sin(np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
+        return -10 * np.sin(2 * np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
+
+
+class TestDerivative(Function):
+    """
+    Some known differentiable function
+    """
+    def evaluate(self, x):
+        return -20 * np.asarray(x) * np.cos(2 * np.pi * np.asarray(x)**2) + 6 * np.asarray(x) + 1
 
 
 class MixFunction(Function):
@@ -18,20 +26,24 @@ class MixFunction(Function):
     Some known differentiable function
     """
     def evaluate(self, x):
-        return np.ones(x.shape[0], dtype=np.double)
+        # return np.ones(x.shape[0], dtype=np.double)
         # return np.zeros(x.shape[0], dtype=np.double)
+        return np.asarray(x)**2 * np.cos(np.asarray(x))
 
 
 y = TestFunction()
 p = MixFunction()
 dy_numeric = NumericGradient(y)
+dy_analytic = TestDerivative()
+
+dy = dy_analytic
 
 start = -1.0
 stop = 2.0
 
-nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
+nodes = np.linspace(start, stop, num=501, endpoint=True)  # generate nodes
 p_nodes = p.evaluate(nodes)
-f_nodes = dy_numeric.evaluate(nodes) + p_nodes * y.evaluate(nodes)
+f_nodes = dy.evaluate(nodes) + p_nodes * y.evaluate(nodes)
 bc1 = y.evaluate(np.array([start]))[0]  # left Dirichlet boundary condition
 bc2 = y.evaluate(np.array([stop]))[0]  # right Dirichlet boundary condition
 
@@ -54,6 +66,7 @@ ax3.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
 ax3.plot(nodes, result[:, 0], 'b-', label='solution')
 ax3.legend()
 
-ax4.plot(nodes, result[:, 1], 'g-o', label='residual')
+ax4.plot(nodes[2:-2], result[2:-2, 1], 'g-o', label='residual')
 ax4.legend()
 plt.show()
+print(np.mean(result[:, 1]))
