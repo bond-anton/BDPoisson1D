@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from BDPoisson1D import dirichlet_first_order_solver_arrays
+from BDPoisson1D.FirstOrderLinear import dirichlet_first_order_solver_arrays
 from BDPoisson1D import Function, NumericGradient
 
 
@@ -50,7 +50,6 @@ bc2 = y.evaluate(np.array([stop]))[0]  # right Dirichlet boundary condition
 result = dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes, bc1, bc2, j=1.0)  # solve Poisson equation
 
 dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
-d2y_solution = np.gradient(dy_solution, nodes, edge_order=2)
 
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
