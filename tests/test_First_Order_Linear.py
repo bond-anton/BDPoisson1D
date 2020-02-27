@@ -26,7 +26,13 @@ class MixFunction(Function):
 
 class FFunction(Function):
 
-    def __init__(self, p, y, yd):
+    def __init__(self, p, y, dy):
+        self.p = p
+        self.y = y
+        self.dy = dy
+
+    def evaluate(self, x):
+        return self.dy.evaluate(x) + self.p.evaluate(x) * self.y.evaluate(x)
 
 
 class TestDirichletFirstOrder(unittest.TestCase):
@@ -35,6 +41,7 @@ class TestDirichletFirstOrder(unittest.TestCase):
         self.y = TestFunction()
         self.dy_numeric = NumericGradient(self.y)
         self.p = MixFunction()
+        self.f = FFunction(self.p, self.y, self.dy_numeric)
 
     def test_dirichlet_first_order_solver_arrays(self):
         start = -1.0
@@ -60,16 +67,12 @@ class TestDirichletFirstOrder(unittest.TestCase):
         stop = 2.0
 
         nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
-        p_nodes = self.p.evaluate(nodes)
-        f_nodes = self.dy_numeric.evaluate(nodes) + p_nodes * self.y.evaluate(nodes)
         bc1 = self.y.evaluate([start])[0]  # left Dirichlet boundary condition
         bc2 = self.y.evaluate([stop])[0]  # right Dirichlet boundary condition
 
-        result_1 = np.asarray(dirichlet_first_order_solver(nodes, self.p, self.f_nodes,
-                                                                  bc1, bc2, j=1))
+        result_1 = np.asarray(dirichlet_first_order_solver(nodes, self.p, self.f,
+                                                           bc1, bc2, j=1))
         nodes = np.linspace(start, stop, num=501, endpoint=True)
-        p_nodes = self.p.evaluate(nodes)
-        f_nodes = self.dy_numeric.evaluate(nodes) + p_nodes * self.y.evaluate(nodes)
-        result_2 = np.asarray(dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes,
-                                                                  bc1, bc2, j=1))
+        result_2 = np.asarray(dirichlet_first_order_solver(nodes, self.p, self.f,
+                                                           bc1, bc2, j=1))
         self.assertTrue(np.mean(result_2[:, 1]) < np.mean(result_1[:, 1]))
