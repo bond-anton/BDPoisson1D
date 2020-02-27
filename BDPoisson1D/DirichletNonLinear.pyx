@@ -34,7 +34,7 @@ cpdef double[:, :] dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, d
     :return: solution y = y0 + w * Dy; Dy; residual.
     """
     cdef:
-        int i, n = nodes.size - 2, nrhs = 1, info
+        int i, n = nodes.shape[0] - 2, nrhs = 1, info
         array[double] b, f, d, dl, du, template = array('d')
         double[:, :] result = np.empty((n + 2, 3), dtype=np.double)
     d = clone(template, n, zero=False)
