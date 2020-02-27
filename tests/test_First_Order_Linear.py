@@ -3,7 +3,7 @@ import numpy as np
 from BDMesh import Mesh1DUniform
 from BDPoisson1D.FirstOrderLinear import dirichlet_first_order_solver_arrays, dirichlet_first_order_solver
 from BDPoisson1D.FirstOrderLinear import dirichlet_first_order_solver_mesh_arrays, dirichlet_first_order_solver_mesh
-# from BDPoisson1D.DirichletLinear import dirichlet_poisson_solver_amr
+from BDPoisson1D.FirstOrderLinear import dirichlet_first_order_solver_amr
 from BDPoisson1D.Function import Function, NumericGradient
 
 import unittest
@@ -105,3 +105,16 @@ class TestDirichletFirstOrder(unittest.TestCase):
                                physical_step=0.01)
         dirichlet_first_order_solver_mesh(mesh_2, self.p, self.f)
         self.assertTrue(np.mean(np.asarray(mesh_2.residual)) < np.mean(np.asarray(mesh_1.residual)))
+
+    def test_dirichlet_poisson_solver_amr(self):
+        start = 0.2
+        stop = 1.2
+        step = 0.01
+        threshold = 1e-2
+        max_level = 15
+        meshes = dirichlet_first_order_solver_amr(start, stop, step, self.p, self.f,
+                                                  self.y.evaluate([start])[0], self.y.evaluate([stop])[0],
+                                                  threshold, max_level=max_level)
+        flat_mesh = meshes.flatten()
+        if len(meshes.levels) < max_level:
+            self.assertTrue(max(abs(np.asarray(flat_mesh.residual))) < 1.0e-2)

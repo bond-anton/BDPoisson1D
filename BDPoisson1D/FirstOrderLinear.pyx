@@ -62,6 +62,7 @@ cpdef double[:, :] dirichlet_first_order_solver_arrays(double[:] nodes, double[:
 
 
 @boundscheck(False)
+@wraparound(False)
 cpdef double[:, :] dirichlet_first_order_solver(double[:] nodes, Function p, Function f,
                                                 double bc1, double bc2, double j=1.0):
     """
@@ -84,6 +85,7 @@ cpdef double[:, :] dirichlet_first_order_solver(double[:] nodes, Function p, Fun
 
 
 @boundscheck(False)
+@wraparound(False)
 cpdef void dirichlet_first_order_solver_mesh_arrays(Mesh1DUniform mesh, double[:] p_nodes, double[:] f_nodes):
     """
     Solves 1D differential equation of the form
@@ -104,6 +106,8 @@ cpdef void dirichlet_first_order_solver_mesh_arrays(Mesh1DUniform mesh, double[:
     mesh.residual = result[:, 1]
 
 
+@boundscheck(False)
+@wraparound(False)
 cpdef void dirichlet_first_order_solver_mesh(Mesh1DUniform mesh, Function p, Function f):
     """
     Solves 1D differential equation of the form
@@ -116,3 +120,84 @@ cpdef void dirichlet_first_order_solver_mesh(Mesh1DUniform mesh, Function p, Fun
     :param f: function f(x) callable on nodes array.
     """
     dirichlet_first_order_solver_mesh_arrays(mesh, p.evaluate(mesh.physical_nodes), f.evaluate(mesh.physical_nodes))
+
+
+@boundscheck(False)
+@wraparound(False)
+cpdef void dirichlet_first_order_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function p, Function f,
+                                                 int max_iter=1000, double threshold=1e-2, int max_level=10):
+    """
+    Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
+    :param meshes_tree: mesh_tree to start with (only root mesh is needed).
+    :param p: function p(x) callable on nodes array.
+    :param f: function f(x) callable on nodes array.
+    :param max_iter: maximal number of allowed iterations.
+    :param threshold: algorithm convergence residual threshold value.
+    :param max_level: max level of mesh refinement.
+    """
+    cdef:
+        int level, i = 0, j, converged, n
+        Mesh1DUniform mesh
+        int[:, :] refinements
+    while i < max_iter:
+        i += 1
+        level = max(meshes_tree.levels)
+        converged = 0
+        n = 0
+        for mesh in meshes_tree.__tree[level]:
+            n += 1
+            dirichlet_first_order_solver_mesh(mesh, p, f)
+            mesh.trim()
+            refinements = refinement_points(mesh, threshold, crop_l=20, crop_r=20,
+                                            step_scale=meshes_tree.refinement_coefficient)
+            if refinements.shape[0] == 0:
+                converged += 1
+                continue
+            if level < max_level and i < max_iter:
+                for j in range(refinements.shape[0]):
+                    meshes_tree.add_mesh(Mesh1DUniform(
+                        mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][0]],
+                        mesh.__physical_boundary_1 + mesh.j() * mesh.__local_nodes[refinements[j][1]],
+                        boundary_condition_1=mesh.__solution[refinements[j][0]],
+                        boundary_condition_2=mesh.__solution[refinements[j][1]],
+                        physical_step=mesh.physical_step/meshes_tree.refinement_coefficient,
+                        crop=[refinements[j][2], refinements[j][3]]))
+        meshes_tree.remove_coarse_duplicates()
+        if converged == n or level == max_level:
+            break
+
+
+@boundscheck(False)
+@wraparound(False)
+cpdef TreeMesh1DUniform dirichlet_first_order_solver_amr(double boundary_1, double boundary_2, double step,
+                                                         Function p, Function f,
+                                                         double bc1, double bc2,
+                                                         int max_iter=1000,
+                                                         double threshold=1e-2, int max_level=10):
+    """
+    Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
+    :param boundary_1: physical nodes left boundary.
+    :param boundary_2: physical nodes right boundary.
+    :param step: physical nodes step.
+    :param p: function p(x) callable on nodes array.
+    :param f: function f(x) callable on nodes array.
+    :param bc1: boundary condition at nodes[0] point (a number).
+    :param bc2: boundary condition at nodes[n] point (a number).
+    :param max_iter: maximal number of allowed iterations.
+    :param threshold: algorithm convergence residual threshold value.
+    :param max_level: max level of mesh refinement.
+    :return: meshes tree with solution and residual.
+    """
+    cdef:
+        Mesh1DUniform root_mesh, mesh
+        TreeMesh1DUniform meshes_tree
+        int level, mesh_id, idx1, idx2, i = 0
+        long[:] converged, block
+        list refinements, refinement_points_chunks, mesh_crop
+    root_mesh = Mesh1DUniform(boundary_1, boundary_2,
+                              boundary_condition_1=bc1,
+                              boundary_condition_2=bc2,
+                              physical_step=round(step, 9))
+    meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
+    dirichlet_first_order_solver_mesh_amr(meshes_tree, p, f, max_iter, threshold, max_level)
+    return meshes_tree
