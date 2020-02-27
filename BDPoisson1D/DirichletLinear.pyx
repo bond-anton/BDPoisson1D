@@ -57,6 +57,8 @@ cpdef double[:, :] dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_
     return result
 
 
+@boundscheck(False)
+@wraparound(False)
 cpdef double[:, :] dirichlet_poisson_solver(double[:] nodes, Function f, double bc1, double bc2, double j=1.0):
     """
     Solves 1D differential equation of the form
@@ -77,6 +79,7 @@ cpdef double[:, :] dirichlet_poisson_solver(double[:] nodes, Function f, double 
 
 
 @boundscheck(False)
+@wraparound(False)
 cpdef void dirichlet_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_nodes):
     """
     Solves 1D differential equation of the form
@@ -96,6 +99,8 @@ cpdef void dirichlet_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_
     mesh.residual = result[:, 1]
 
 
+@boundscheck(False)
+@wraparound(False)
 cpdef void dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
     """
     Solves 1D differential equation of the form
@@ -109,12 +114,14 @@ cpdef void dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
     dirichlet_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.physical_nodes))
 
 
+@boundscheck(False)
+@wraparound(False)
 cpdef void dirichlet_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function f,
                                              int max_iter=1000,
                                              double threshold=1e-2, int max_level=10):
     """
     Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
-    :param mesh_tree: mesh_tree to start with (only root mesh is needed).
+    :param meshes_tree: mesh_tree to start with (only root mesh is needed).
     :param f: function f(x) callable on nodes array.
     :param max_iter: maximal number of allowed iterations.
     :param threshold: algorithm convergence residual threshold value.
@@ -153,7 +160,7 @@ cpdef void dirichlet_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Func
 
 
 @boundscheck(False)
-@wraparound(True)
+@wraparound(False)
 cpdef TreeMesh1DUniform dirichlet_poisson_solver_amr(double boundary_1, double boundary_2, double step, Function f,
                                                      double bc1, double bc2,
                                                      int max_iter=1000,
