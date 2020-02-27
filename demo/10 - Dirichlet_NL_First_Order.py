@@ -47,7 +47,7 @@ class MixFunction(Function):
 
 
 Nd = lambda x: np.ones_like(x)
-kT = 1 / 20
+kT = 1.0e-2
 
 y = TestFunction()
 dy_numeric = NumericGradient(y)
@@ -86,15 +86,15 @@ dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 ax1.plot(nodes, f_nodes, 'r-', label='f(x)')
-ax1.plot(nodes, dy_solution + np.asarray(result[:, 0]) * np.asarray(p_nodes), 'b-', label='dy/dx + p(x)*y (solution)')
+ax1.plot(nodes[2:-2], dy_solution[2:-2] + np.asarray(result[2:-2, 0]) * np.asarray(p_nodes[2:-2]), 'b-', label='dy/dx + p(x)*y (solution)')
 ax1.legend()
 
 ax2.plot(nodes, dy_numeric.evaluate(nodes), 'r-', label='dy/dx')
-ax2.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
+ax2.plot(nodes[2:-2], dy_solution[2:-2], 'b-', label='dy/dx (solution)')
 ax2.legend()
 
 ax3.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
-ax3.plot(nodes, result[:, 0], 'b-', label='solution')
+ax3.plot(nodes[2:-2], result[2:-2, 0], 'b-', label='solution')
 ax3.legend()
 
 ax4.plot(nodes[2:-2], result[2:-2, 1], 'g-o', label='residual')
