@@ -55,27 +55,27 @@ class TestDirichletNL(unittest.TestCase):
         nodes = np.linspace(start, stop, num=51, endpoint=True, dtype=np.float)
         Psi = testPsi()
         f = testF(self.Nd, self.kT, Psi)
-        dfdDPsi = testdFdPsi(self.Nd, self.kT, Psi)
+        dfdPsi = testdFdPsi(self.Nd, self.kT, Psi)
         for i in range(100):
             result_1 = np.asarray(dirichlet_non_linear_poisson_solver_arrays(nodes, Psi.evaluate(nodes),
                                                                              f.evaluate(nodes),
-                                                                             dfdDPsi.evaluate(nodes),
+                                                                             dfdPsi.evaluate(nodes),
                                                                              bc1=1, bc2=0, j=1, w=1))
             Psi = InterpolateFunction(nodes, result_1[:, 0])
             f.f = Psi
-            dfdDPsi.f = Psi
+            dfdPsi.f = Psi
         nodes = np.linspace(start, stop, num=101, endpoint=True, dtype=np.float)
         Psi = testPsi()
         f.f = Psi
-        dfdDPsi.f = Psi
+        dfdPsi.f = Psi
         for i in range(100):
             result_2 = np.asarray(dirichlet_non_linear_poisson_solver_arrays(nodes, Psi.evaluate(nodes),
                                                                              f.evaluate(nodes),
-                                                                             dfdDPsi.evaluate(nodes),
+                                                                             dfdPsi.evaluate(nodes),
                                                                              bc1=1, bc2=0, j=1, w=1))
             Psi = InterpolateFunction(nodes, result_2[:, 0])
             f.f = Psi
-            dfdDPsi.f = Psi
+            dfdPsi.f = Psi
         self.assertTrue(max(abs(result_2[:, 2])) < max(abs(result_1[:, 2])))
 
     def test_dirichlet_poisson_solver(self):
@@ -85,23 +85,23 @@ class TestDirichletNL(unittest.TestCase):
         nodes = np.linspace(start, stop, num=51, endpoint=True, dtype=np.float)
         Psi = testPsi()
         f = testF(self.Nd, self.kT, Psi)
-        dfdDPsi = testdFdPsi(self.Nd, self.kT, Psi)
+        dfdPsi = testdFdPsi(self.Nd, self.kT, Psi)
         for i in range(100):
-            result_1 = np.asarray(dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdDPsi,
+            result_1 = np.asarray(dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi,
                                                                       bc1=1, bc2=0, j=1, w=1))
             Psi = InterpolateFunction(nodes, result_1[:, 0])
             f.f = Psi
-            dfdDPsi.f = Psi
+            dfdPsi.f = Psi
         nodes = np.linspace(start, stop, num=101, endpoint=True, dtype=np.float)
         Psi = testPsi()
         f.f = Psi
-        dfdDPsi.f = Psi
+        dfdPsi.f = Psi
         for i in range(100):
-            result_2 = np.asarray(dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdDPsi,
+            result_2 = np.asarray(dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi,
                                                                       bc1=1, bc2=0, j=1, w=1))
             Psi = InterpolateFunction(nodes, result_2[:, 0])
             f.f = Psi
-            dfdDPsi.f = Psi
+            dfdPsi.f = Psi
         self.assertTrue(max(abs(result_2[:, 2])) < max(abs(result_1[:, 2])))
 
     def test_dirichlet_poisson_solver_mesh_arays(self):
@@ -111,30 +111,30 @@ class TestDirichletNL(unittest.TestCase):
         mesh_1 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = testPsi()
         f = testF(self.Nd, self.kT, Psi)
-        dfdDPsi = testdFdPsi(self.Nd, self.kT, Psi)
+        dfdPsi = testdFdPsi(self.Nd, self.kT, Psi)
         for i in range(100):
             dirichlet_non_linear_poisson_solver_mesh_arrays(mesh_1,
                                                             Psi.evaluate(mesh_1.physical_nodes),
                                                             f.evaluate(mesh_1.physical_nodes),
-                                                            dfdDPsi.evaluate(mesh_1.physical_nodes),
+                                                            dfdPsi.evaluate(mesh_1.physical_nodes),
                                                             w=1)
             Psi = InterpolateFunction(mesh_1.physical_nodes, mesh_1.solution)
             f.f = Psi
-            dfdDPsi.f = Psi
+            dfdPsi.f = Psi
         step = 0.1
         mesh_2 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = testPsi()
         f.f = Psi
-        dfdDPsi.f = Psi
+        dfdPsi.f = Psi
         for i in range(100):
             dirichlet_non_linear_poisson_solver_mesh_arrays(mesh_2,
                                                             Psi.evaluate(mesh_2.physical_nodes),
                                                             f.evaluate(mesh_2.physical_nodes),
-                                                            dfdDPsi.evaluate(mesh_2.physical_nodes),
+                                                            dfdPsi.evaluate(mesh_2.physical_nodes),
                                                             w=1)
             Psi = InterpolateFunction(mesh_2.physical_nodes, mesh_2.solution)
             f.f = Psi
-            dfdDPsi.f = Psi
+            dfdPsi.f = Psi
         self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
 
     def test_dirichlet_poisson_solver_mesh(self):
@@ -144,22 +144,22 @@ class TestDirichletNL(unittest.TestCase):
         mesh_1 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = testPsi()
         f = testF(self.Nd, self.kT, Psi)
-        dfdDPsi = testdFdPsi(self.Nd, self.kT, Psi)
+        dfdPsi = testdFdPsi(self.Nd, self.kT, Psi)
         for i in range(100):
-            dirichlet_non_linear_poisson_solver_mesh(mesh_1, Psi, f, dfdDPsi, w=1)
+            dirichlet_non_linear_poisson_solver_mesh(mesh_1, Psi, f, dfdPsi, w=1)
             Psi = InterpolateFunction(mesh_1.physical_nodes, mesh_1.solution)
             f.f = Psi
-            dfdDPsi.f = Psi
+            dfdPsi.f = Psi
         step = 0.1
         mesh_2 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = testPsi()
         f.f = Psi
-        dfdDPsi.f = Psi
+        dfdPsi.f = Psi
         for i in range(100):
-            dirichlet_non_linear_poisson_solver_mesh(mesh_2, Psi, f, dfdDPsi, w=1)
+            dirichlet_non_linear_poisson_solver_mesh(mesh_2, Psi, f, dfdPsi, w=1)
             Psi = InterpolateFunction(mesh_2.physical_nodes, mesh_2.solution)
             f.f = Psi
-            dfdDPsi.f = Psi
+            dfdPsi.f = Psi
         self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
 
 
@@ -172,15 +172,15 @@ class TestDirichletNL(unittest.TestCase):
         mesh_1 = Mesh1DUniform(start, stop, boundary_condition_1=1, boundary_condition_2=0, physical_step=step)
         Psi = testPsi()
         f = testF(self.Nd, self.kT, Psi)
-        dfdDPsi = testdFdPsi(self.Nd, self.kT, Psi)
-        dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh_1, Psi, f, dfdDPsi,
+        dfdPsi = testdFdPsi(self.Nd, self.kT, Psi)
+        dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh_1, Psi, f, dfdPsi,
                                                            max_iter=max_iter, threshold=threshold)
         self.assertTrue(mesh_1.integrational_residual < threshold)
 
     def test_dirichlet_poisson_solver_mesh_amr(self):
         Psi = testPsi()
         f = testF(self.Nd, self.kT, Psi)
-        dfdDPsi = testdFdPsi(self.Nd, self.kT, Psi)
+        dfdPsi = testdFdPsi(self.Nd, self.kT, Psi)
         start = 0.0
         stop = 5
         step = 0.433
@@ -193,7 +193,7 @@ class TestDirichletNL(unittest.TestCase):
         max_iter = 1000
         max_level = 20
         # print('start')
-        Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdDPsi, bc1, bc2,
+        Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdPsi, bc1, bc2,
                                                          max_iter=max_iter, residual_threshold=residual_threshold,
                                                          int_residual_threshold=int_residual_threshold,
                                                          max_level=max_level,
@@ -209,7 +209,7 @@ class TestDirichletNL(unittest.TestCase):
         mesh_refinement_threshold = 1e-5
         max_iter = 1000
         max_level = 20
-        Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdDPsi, bc1, bc2,
+        Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdPsi, bc1, bc2,
                                                          max_iter=max_iter, residual_threshold=residual_threshold,
                                                          int_residual_threshold=int_residual_threshold,
                                                          max_level=max_level,

@@ -39,7 +39,7 @@ kT = 1 / 20
 
 Psi = TestFunction()
 f = TestFunctional(Nd, kT, Psi)
-dfdDPsi = TestFunctionalDf(Nd, kT, Psi)
+dfdPsi = TestFunctionalDf(Nd, kT, Psi)
 
 
 bc1 = 1.0
@@ -47,7 +47,7 @@ bc2 = 0.0
 
 root_mesh = Mesh1DUniform(0.0, 10.0, bc1, bc2, 0.2)
 
-dirichlet_non_linear_poisson_solver_recurrent_mesh(root_mesh, Psi, f, dfdDPsi, max_iter=1000, threshold=1e-6)
+dirichlet_non_linear_poisson_solver_recurrent_mesh(root_mesh, Psi, f, dfdPsi, max_iter=1000, threshold=1e-6)
 Psi = InterpolateFunction(root_mesh.physical_nodes, root_mesh.solution)
 
 mesh_refinement_threshold = 1e-7

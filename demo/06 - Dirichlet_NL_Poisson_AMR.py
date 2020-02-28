@@ -39,7 +39,7 @@ kT = 1 / 20
 
 Psi = TestFunction()
 f = TestFunctional(Nd, kT, Psi)
-dfdDPsi = TestFunctionalDf(Nd, kT, Psi)
+dfdPsi = TestFunctionalDf(Nd, kT, Psi)
 
 colors = ['b', 'g', 'y', 'k', 'm', 'c', 'b', 'g', 'y', 'k', 'm', 'c', 'b', 'g', 'y',
           'k', 'm', 'c', 'b', 'g', 'y', 'k', 'm', 'c']
@@ -67,7 +67,7 @@ step = 0.5
 bc1 = 1.0
 bc2 = 0.0
 
-Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdDPsi, bc1, bc2,
+Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdPsi, bc1, bc2,
                                                  max_iter=1000, residual_threshold=1.5e-3,
                                                  int_residual_threshold=1.5e-4,
                                                  max_level=20, mesh_refinement_threshold=1e-7)

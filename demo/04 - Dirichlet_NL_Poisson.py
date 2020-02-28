@@ -38,7 +38,7 @@ kT = 1 / 20
 
 Psi = TestFunction()
 f = TestFunctional(Nd, kT, Psi)
-dfdDPsi = TestFunctionalDf(Nd, kT, Psi)
+dfdPsi = TestFunctionalDf(Nd, kT, Psi)
 
 nodes = np.linspace(0., 4., num=21, endpoint=True, dtype=np.float)
 bc1 = 1.0
@@ -71,10 +71,10 @@ plt.draw()
 
 for i in range(100):
     print(i + 1)
-    result = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdDPsi, bc1=bc1, bc2=bc2, j=1.0)
+    result = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi, bc1=bc1, bc2=bc2, j=1.0)
     Psi = InterpolateFunction(nodes, result[:, 0])
     f.f = Psi
-    dfdDPsi.f = Psi
+    dfdPsi.f = Psi
     DPsi = result[:, 1]
     R = result[:, 2]
     dPsi = np.gradient(Psi.evaluate(nodes), nodes, edge_order=2)
