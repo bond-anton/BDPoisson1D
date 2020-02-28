@@ -14,19 +14,19 @@ from .Function cimport Function, Functional, InterpolateFunction
 @boundscheck(False)
 @wraparound(False)
 cpdef double[:, :] dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, double[:] y0_nodes,
-                                                              double[:] f_nodes, double[:] df_ddy_nodes,
+                                                              double[:] f_nodes, double[:] df_dy_nodes,
                                                               double bc1, double bc2, double j=1.0, double w=1.0):
     """
-    Solves 1D differential equation of the form
+    Solves nonlinear 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision and Tailor series for linearization.
         y = y0 + Dy
-        f(x, y(x)) ~= f(x, y0) + df/dDy(x, y0)*Dy
+        f(x, y(x)) ~= f(x, y0) + df/dy(x, y=y0)*Dy
     :param nodes: 1D array of x nodes. Must include boundary points.
     :param y0_nodes: 1D array of y(x) initial approximation at nodes. Must be same shape as nodes.
     :param f_nodes: 1D array of values of f(x) on nodes array. Must be same shape as nodes.
-    :param df_ddy_nodes: df/dDy, where Dy is delta y for y0 correction.
+    :param df_dy_nodes: df/dy(x, y=y0).
     :param bc1: boundary condition at nodes[0] point (a number).
     :param bc2: boundary condition at nodes[n] point (a number).
     :param j: Jacobian.
@@ -50,7 +50,7 @@ cpdef double[:, :] dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, d
         if i < n - 1:
             dl[i] = 1.0
             du[i] = 1.0
-        d[i] = -2.0 - (j * (nodes[i + 1] - nodes[i])) ** 2 * df_ddy_nodes[i + 1]
+        d[i] = -2.0 - (j * (nodes[i + 1] - nodes[i])) ** 2 * df_dy_nodes[i + 1]
         f[i] = (j * (nodes[i + 1] - nodes[i])) ** 2 * f_nodes[i + 1] - b[i]
     f[0] -= bc1
     f[n - 1] -= bc2
@@ -71,19 +71,19 @@ cpdef double[:, :] dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, d
 
 @boundscheck(False)
 @wraparound(False)
-cpdef double[:, :] dirichlet_non_linear_poisson_solver(double[:] nodes, Function y0, Functional f, Functional df_ddy,
+cpdef double[:, :] dirichlet_non_linear_poisson_solver(double[:] nodes, Function y0, Functional f, Functional df_dy,
                                                        double bc1, double bc2, double j=1.0, double w=1.0):
     """
-    Solves 1D differential equation of the form
+    Solves nonlinear 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision and Tailor series for linearization.
         y = y0 + Dy
-        f(x, y(x)) ~= f(x, y0) + df/dDy(x, y0)*Dy
+        f(x, y(x)) ~= f(x, y0) + df/dy(x, y=y0)*Dy
     :param nodes: 1D array of x nodes. Must include boundary points.
     :param y0: callable of y(x) initial approximation.
     :param f: callable of f(x) to be evaluated on nodes array.
-    :param df_ddy: callable for evaluation of df/dDy, where Dy is delta y for y0 correction.
+    :param df_dy: callable for evaluation of df/dy(x, y=y0).
     :param bc1: boundary condition at nodes[0] point (a number).
     :param bc2: boundary condition at nodes[n] point (a number).
     :param j: Jacobian.
@@ -91,7 +91,7 @@ cpdef double[:, :] dirichlet_non_linear_poisson_solver(double[:] nodes, Function
     :return: solution as callable function y = y0 + w * Dy; Dy; residual.
     """
     return dirichlet_non_linear_poisson_solver_arrays(nodes, y0.evaluate(nodes),
-                                                      f.evaluate(nodes), df_ddy.evaluate(nodes),
+                                                      f.evaluate(nodes), df_dy.evaluate(nodes),
                                                       bc1, bc2, j, w)
 
 
@@ -99,25 +99,25 @@ cpdef double[:, :] dirichlet_non_linear_poisson_solver(double[:] nodes, Function
 @wraparound(False)
 cpdef void dirichlet_non_linear_poisson_solver_mesh_arrays(Mesh1DUniform mesh,
                                                            double[:] y0_nodes, double[:] f_nodes,
-                                                           double[:] df_ddy_nodes, double w=1.0):
+                                                           double[:] df_dy_nodes, double w=1.0):
     """
-    Solves 1D differential equation of the form
+    Solves nonlinear 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision and Tailor series for linearization.
         y = y0 + Dy
-        f(x, y(x)) ~= f(x, y0) + df/dDy(x, y0)*Dy
+        f(x, y(x)) ~= f(x, y0) + df/dy(x, y=y0)*Dy
     :param mesh: 1D Uniform mesh with boundary conditions and Jacobian.
     :param y0_nodes: 1D array of y(x) initial approximation at mesh nodes.
     :param f_nodes: 1D array of values of f(x) on mesh nodes.
-    :param df_ddy_nodes: df/dDy, where Dy is delta y for y0 correction.
+    :param df_dy_nodes: df/dy(x, y=y0).
     :param w: the weight for Dy (default w=1.0)
     :return: mesh with solution y = y0 + w * Dy, and residual; Dy.
     """
     cdef:
         double[:, :] result
     result = dirichlet_non_linear_poisson_solver_arrays(mesh.__local_nodes, y0_nodes, f_nodes,
-                                                        df_ddy_nodes,
+                                                        df_dy_nodes,
                                                         mesh.__boundary_condition_1,
                                                         mesh.__boundary_condition_2,
                                                         mesh.j(), w)
@@ -127,19 +127,19 @@ cpdef void dirichlet_non_linear_poisson_solver_mesh_arrays(Mesh1DUniform mesh,
 
 @boundscheck(False)
 @wraparound(False)
-cpdef void dirichlet_non_linear_poisson_solver_mesh(Mesh1DUniform mesh, Function y0, Functional f, Functional df_ddy,
+cpdef void dirichlet_non_linear_poisson_solver_mesh(Mesh1DUniform mesh, Function y0, Functional f, Functional df_dy,
                                                     double w=1.0):
     """
-    Solves 1D differential equation of the form
+    Solves nonlinear 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision and Tailor series for linearization.
         y = y0 + Dy
-        f(x, y(x)) ~= f(x, y0) + df/dDy(x, y0)*Dy
+        f(x, y(x)) ~= f(x, y0) + df/dy(x, y=y0)*Dy
     :param mesh: 1D Uniform mesh with boundary conditions and Jacobian.
     :param y0: callable of y(x) initial approximation.
     :param f: callable of f(x) to be evaluated on nodes array.
-    :param df_ddy: callable for evaluation of df/dDy, where Dy is delta y for y0 correction.
+    :param df_dy: callable for evaluation of df/dy(x, y=y0).
     :param w: the weight for Dy (default w=1.0)
     :return: mesh with solution y = y0 + w * Dy, and residual; callable solution function; Dy.
     """
@@ -148,43 +148,45 @@ cpdef void dirichlet_non_linear_poisson_solver_mesh(Mesh1DUniform mesh, Function
     dirichlet_non_linear_poisson_solver_mesh_arrays(mesh,
                                                     y0.evaluate(physical_nodes),
                                                     f.evaluate(physical_nodes),
-                                                    df_ddy.evaluate(physical_nodes), w)
+                                                    df_dy.evaluate(physical_nodes), w)
 
 
 @boundscheck(False)
 @wraparound(False)
 cpdef void dirichlet_non_linear_poisson_solver_recurrent_mesh(Mesh1DUniform mesh,
-                                                              Function y0, Functional f, Functional df_ddy,
+                                                              Function y0, Functional f, Functional df_dy,
                                                               int max_iter=1000, double threshold=1e-7):
     """
-    Solves 1D differential equation of the form
+    Solves nonlinear 1D differential equation of the form
         d2y/dx2 = f(x, y(x))
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision and Tailor series for linearization.
         y = y0 + Dy
-        f(x, y(x)) ~= f(x, y0) + df/dDy(x, y0)*Dy
+        f(x, y(x)) ~= f(x, y0) + df/dy(x, y=y0)*Dy
     Recurrent successive approximation of y0 is used to achieve given residual error threshold value.
     :param mesh: 1D Uniform mesh with boundary conditions and Jacobian.
     :param y0: callable of y(x) initial approximation.
     :param f: callable of f(x) to be evaluated on nodes array.
-    :param df_ddy: callable for evaluation of df/dDy, where Dy is delta y for y0 correction.
+    :param df_dy: callable for evaluation of df/dy(x, y=y0).
     :param max_iter: maximal number of allowed iterations.
     :param threshold: convergence residual error threshold.
     :return: mesh with solution y = y0 + w * Dy, and residual; callable solution function.
     """
+    cdef:
+        int i
     for i in range(max_iter):
-        dirichlet_non_linear_poisson_solver_mesh(mesh, y0, f, df_ddy)
+        dirichlet_non_linear_poisson_solver_mesh(mesh, y0, f, df_dy)
         if abs(mesh.integrational_residual) <= threshold:  # or max(abs(np.asarray(dy))) <= 2 * np.finfo(np.float).eps:
             break
         y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)
         f.__f = y0
-        df_ddy.__f = y0
+        df_dy.__f = y0
 
 
 @boundscheck(False)
 @wraparound(False)
 cpdef void dirichlet_non_linear_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree,
-                                                        Function y0, Functional f, Functional df_ddy,
+                                                        Function y0, Functional f, Functional df_dy,
                                                         int max_iter=1000,
                                                         double residual_threshold=1e-7,
                                                         double int_residual_threshold=1e-6,
@@ -200,11 +202,11 @@ cpdef void dirichlet_non_linear_poisson_solver_mesh_amr(TreeMesh1DUniform meshes
         n = 0
         for mesh in meshes_tree.__tree[level]:
             n += 1
-            dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh, y0, f, df_ddy,
+            dirichlet_non_linear_poisson_solver_recurrent_mesh(mesh, y0, f, df_dy,
                                                                max_iter, int_residual_threshold)
             y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)
             f.__f = y0
-            df_ddy.__f = y0
+            df_dy.__f = y0
             mesh.trim()
             refinements = refinement_points(mesh, residual_threshold, crop_l=20, crop_r=20,
                                             step_scale=meshes_tree.refinement_coefficient)
@@ -228,7 +230,7 @@ cpdef void dirichlet_non_linear_poisson_solver_mesh_amr(TreeMesh1DUniform meshes
 @boundscheck(False)
 @wraparound(False)
 cpdef TreeMesh1DUniform dirichlet_non_linear_poisson_solver_amr(double boundary_1, double boundary_2, double step,
-                                                                Function y0, Functional f, Functional df_ddy,
+                                                                Function y0, Functional f, Functional df_dy,
                                                                 double bc1, double bc2,
                                                                 int max_iter=1000,
                                                                 double residual_threshold=1e-3,
@@ -236,12 +238,12 @@ cpdef TreeMesh1DUniform dirichlet_non_linear_poisson_solver_amr(double boundary_
                                                                 int max_level=20,
                                                                 double mesh_refinement_threshold=1e-7):
     """
-        Solves 1D differential equation of the form
+        Solves nonlinear 1D differential equation of the form
             d2y/dx2 = f(x, y(x))
             y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
         using FDE algorithm of O(h2) precision and Tailor series for linearization.
             y = y0 + Dy
-            f(x, y(x)) ~= f(x, y0) + df/dDy(x, y0)*Dy
+            f(x, y(x)) ~= f(x, y0) + df/dy(x, y=y0)*Dy
         Recurrent successive approximation of y0 and adaptive mesh refinement
         algorithms are used to achieve given residual error threshold value.
         :param boundary_1: physical nodes left boundary.
@@ -249,7 +251,7 @@ cpdef TreeMesh1DUniform dirichlet_non_linear_poisson_solver_amr(double boundary_
         :param step: physical nodes step.
         :param y0: callable of y(x) initial approximation.
         :param f: callable of f(x) to be evaluated on nodes array.
-        :param df_ddy: callable for evaluation of df/dDy, where Dy is delta y for y0 correction.
+        :param df_dy: callable for evaluation of df/dy(x, y=y0).
         :param bc1: boundary condition at nodes[0] point (a number).
         :param bc2: boundary condition at nodes[n] point (a number).
         :param max_iter: maximal number of allowed iterations.
@@ -270,7 +272,7 @@ cpdef TreeMesh1DUniform dirichlet_non_linear_poisson_solver_amr(double boundary_
                               boundary_condition_2=bc2,
                               physical_step=round(step, 9))
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-    dirichlet_non_linear_poisson_solver_mesh_amr(meshes_tree, y0, f, df_ddy,
+    dirichlet_non_linear_poisson_solver_mesh_amr(meshes_tree, y0, f, df_dy,
                                                  max_iter, residual_threshold, int_residual_threshold,
                                                  max_level, mesh_refinement_threshold)
     return meshes_tree
