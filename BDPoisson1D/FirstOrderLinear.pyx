@@ -16,7 +16,7 @@ from .Function cimport Function
 cpdef double[:, :] dirichlet_first_order_solver_arrays(double[:] nodes, double[:] p_nodes, double[:] f_nodes,
                                                         double bc1, double bc2, double j=1.0):
     """
-    Solves 1D differential equation of the form
+    Solves linear 1D differential equation of the form
         dy/dx + p(x)*y = f(x)
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision.
@@ -66,7 +66,7 @@ cpdef double[:, :] dirichlet_first_order_solver_arrays(double[:] nodes, double[:
 cpdef double[:, :] dirichlet_first_order_solver(double[:] nodes, Function p, Function f,
                                                 double bc1, double bc2, double j=1.0):
     """
-    Solves 1D differential equation of the form
+    Solves linear 1D differential equation of the form
         dy/dx + p(x)*y = f(x)
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision.
@@ -88,7 +88,7 @@ cpdef double[:, :] dirichlet_first_order_solver(double[:] nodes, Function p, Fun
 @wraparound(False)
 cpdef void dirichlet_first_order_solver_mesh_arrays(Mesh1DUniform mesh, double[:] p_nodes, double[:] f_nodes):
     """
-    Solves 1D differential equation of the form
+    Solves linear 1D differential equation of the form
         dy/dx + p(x)*y = f(x)
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision.
@@ -110,7 +110,7 @@ cpdef void dirichlet_first_order_solver_mesh_arrays(Mesh1DUniform mesh, double[:
 @wraparound(False)
 cpdef void dirichlet_first_order_solver_mesh(Mesh1DUniform mesh, Function p, Function f):
     """
-    Solves 1D differential equation of the form
+    Solves linear 1D differential equation of the form
         dy/dx + p(x)*y = f(x)
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision.
