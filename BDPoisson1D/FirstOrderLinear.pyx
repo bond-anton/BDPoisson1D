@@ -89,7 +89,7 @@ cpdef double[:, :] dirichlet_first_order_solver(double[:] nodes, Function p, Fun
 cpdef void dirichlet_first_order_solver_mesh_arrays(Mesh1DUniform mesh, double[:] p_nodes, double[:] f_nodes):
     """
     Solves 1D differential equation of the form
-        d2y/dx2 = f(x)
+        dy/dx + p(x)*y = f(x)
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision.
 
@@ -111,7 +111,7 @@ cpdef void dirichlet_first_order_solver_mesh_arrays(Mesh1DUniform mesh, double[:
 cpdef void dirichlet_first_order_solver_mesh(Mesh1DUniform mesh, Function p, Function f):
     """
     Solves 1D differential equation of the form
-        d2y/dx2 = f(x)
+        dy/dx + p(x)*y = f(x)
         y(x0) = bc1, y(xn) = bc2 (Dirichlet boundary condition)
     using FDE algorithm of O(h2) precision.
 
@@ -127,7 +127,7 @@ cpdef void dirichlet_first_order_solver_mesh(Mesh1DUniform mesh, Function p, Fun
 cpdef void dirichlet_first_order_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function p, Function f,
                                                  int max_iter=1000, double threshold=1e-2, int max_level=10):
     """
-    Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
+    Linear first order ODE equation solver with Adaptive Mesh Refinement algorithm.
     :param meshes_tree: mesh_tree to start with (only root mesh is needed).
     :param p: function p(x) callable on nodes array.
     :param f: function f(x) callable on nodes array.
@@ -175,7 +175,7 @@ cpdef TreeMesh1DUniform dirichlet_first_order_solver_amr(double boundary_1, doub
                                                          int max_iter=1000,
                                                          double threshold=1e-2, int max_level=10):
     """
-    Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
+    Linear first order ODE equation solver with Adaptive Mesh Refinement algorithm.
     :param boundary_1: physical nodes left boundary.
     :param boundary_2: physical nodes right boundary.
     :param step: physical nodes step.
