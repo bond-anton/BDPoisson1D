@@ -2,6 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_arrays
+from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver
 from BDPoisson1D import Function, Functional, NumericGradient, InterpolateFunction
 
 
@@ -69,9 +70,10 @@ bc1 = 1.0
 bc2 = 3.7
 
 for i in range(5000):
-    result = dirichlet_non_linear_first_order_solver_arrays(nodes, y0_nodes, p_nodes,
-                                                            f_nodes, df_dy_nodes,
-                                                            bc1, bc2, j=1.0, w=1.0)  # solve Poisson equation
+    # result = dirichlet_non_linear_first_order_solver_arrays(nodes, y0_nodes, p_nodes,
+    #                                                         f_nodes, df_dy_nodes,
+    #                                                         bc1, bc2, j=1.0, w=1.0)
+    result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=1.0)
     y = InterpolateFunction(nodes, result[:, 0])
     f.f = y
     df_dy.f = y
@@ -86,7 +88,7 @@ dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 ax1.plot(nodes, f_nodes, 'r-', label='f(x)')
-ax1.plot(nodes[:], dy_solution[:] + np.asarray(result[:, 0]) * np.asarray(p_nodes[:]), 'b-', label='dy/dx + p(x)*y (solution)')
+ax1.plot(nodes[2:-2], dy_solution[2:-2] + np.asarray(result[2:-2, 0]) * np.asarray(p_nodes[2:-2]), 'b-', label='dy/dx + p(x)*y (solution)')
 ax1.legend()
 
 ax2.plot(nodes, dy_numeric.evaluate(nodes), 'r-', label='dy/dx')
