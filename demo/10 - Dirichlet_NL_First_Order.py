@@ -10,96 +10,112 @@ class TestFunction(Function):
     """
     Some known differentiable function
     """
+
     def evaluate(self, x):
-        return -10 * np.sin(2 * np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
-        # return np.ones(x.shape[0], dtype=np.double)
-        # return np.ones(x.shape[0], dtype=np.double)
+        xx = np.asarray(x)
+        return np.sin(xx) ** 2
+
 
 class TestFunctional(Functional):
-    def __init__(self, Nd, kT, f):
-        super(TestFunctional, self).__init__(f)
-        self.Nd = Nd
-        self.kT = kT
+    """
+    f(x, y), RHS of the ODE
+    """
 
     def evaluate(self, x):
-        return self.Nd(np.asarray(x)) * (1 - (np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)))
-        # return self.Nd(np.asarray(x)) / self.kT * np.asarray(self.f.evaluate(x))**2
+        xx = np.asarray(x)
+        yy = np.asarray(self.f.evaluate(x))
+        result = np.empty_like(yy)
+        idc = np.where(yy >= 0.5)
+        ids = np.where(yy < 0.5)
+        result[ids] = 2 * np.sign(np.cos(xx[ids])) * np.sin(xx[ids]) * np.sqrt(1 - yy[ids])
+        result[idc] = 2 * np.sign(np.sin(xx[idc])) * np.cos(xx[idc]) * np.sqrt(yy[idc])
+        return result
 
 
 class TestFunctionalDf(Functional):
-    def __init__(self, Nd, kT, f):
-        super(TestFunctionalDf, self).__init__(f)
-        self.Nd = Nd
-        self.kT = kT
+    """
+    df/dy(x, y)
+    """
 
     def evaluate(self, x):
-        return self.Nd(np.asarray(x)) / self.kT * np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)
-        # return 2 * self.Nd(np.asarray(x)) / self.kT * np.asarray(self.f.evaluate(x))
+        xx = np.asarray(x)
+        yy = np.asarray(self.f.evaluate(x))
+        result = np.empty_like(yy)
+        idc = np.where(yy >= 0.5)
+        ids = np.where(yy < 0.5)
+        result[ids] = -np.sign(np.cos(xx[ids])) * np.sin(xx[ids]) / np.sqrt(1 - yy[ids])
+        result[idc] = np.sign(np.sin(xx[idc])) * np.cos(xx[idc]) / np.sqrt(yy[idc])
+        return result
 
 
 class MixFunction(Function):
     """
     Some known differentiable function
     """
+
     def evaluate(self, x):
-        # return np.ones(x.shape[0], dtype=np.double)
-        # return np.zeros(x.shape[0], dtype=np.double)
-        return np.asarray(x)**2 * np.cos(np.asarray(x))
+        return np.zeros(x.shape[0], dtype=np.double)
 
 
-Nd = lambda x: np.ones_like(x)
-kT = 1.0e-2
+class GuessFunction(Function):
+    """
+    Some known differentiable function
+    """
 
-y = TestFunction()
-dy_numeric = NumericGradient(y)
+    def evaluate(self, x):
+        return np.zeros(x.shape[0], dtype=np.double)
+
+
+y0 = TestFunction()
+dy0_numeric = NumericGradient(y0)
+shift = np.pi * 11 + 1
+start = -3 * np.pi / 2 + shift
+stop = 3 * np.pi / 2 + shift + 0.5
+nodes = np.linspace(start, stop, num=1001, endpoint=True)  # generate nodes
+bc1 = y0.evaluate([nodes[0]])[0]
+bc2 = y0.evaluate([nodes[-1]])[0]
+
+y = GuessFunction()
 p = MixFunction()
 
-f = TestFunctional(Nd, kT, y)
-df_dy = TestFunctionalDf(Nd, kT, y)
+f = TestFunctional(y)
+df_dy = TestFunctionalDf(y)
 
-start = -1
-stop = 2
-
-nodes = np.linspace(start, stop, num=103, endpoint=True)  # generate nodes
-y0_nodes = y.evaluate(nodes)
+y_nodes = y.evaluate(nodes)
 p_nodes = p.evaluate(nodes)
 f_nodes = f.evaluate(nodes)
 df_dy_nodes = df_dy.evaluate(nodes)
 
-bc1 = 1.0
-bc2 = 3.7
-
-for i in range(5000):
-    # result = dirichlet_non_linear_first_order_solver_arrays(nodes, y0_nodes, p_nodes,
+for i in range(100):
+    # result = dirichlet_non_linear_first_order_solver_arrays(nodes, y_nodes, p_nodes,
     #                                                         f_nodes, df_dy_nodes,
-    #                                                         bc1, bc2, j=1.0, w=1.0)
-    result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=1.0)
+    #                                                         bc1, bc2, j=1.0, w=0.7)
+    result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=0.7)
     y = InterpolateFunction(nodes, result[:, 0])
+    dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
     f.f = y
     df_dy.f = y
-    y0_nodes = y.evaluate(nodes)
+
+    y_nodes = y.evaluate(nodes)
     p_nodes = p.evaluate(nodes)
     f_nodes = f.evaluate(nodes)
     df_dy_nodes = df_dy.evaluate(nodes)
 
-
-dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
-
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
-ax1.plot(nodes, f_nodes, 'r-', label='f(x)')
-ax1.plot(nodes[2:-2], dy_solution[2:-2] + np.asarray(result[2:-2, 0]) * np.asarray(p_nodes[2:-2]), 'b-', label='dy/dx + p(x)*y (solution)')
+ax1.plot(nodes, f.evaluate(nodes), 'r-', label='f(x)')
+ax1.plot(nodes, dy_solution + np.asarray(result[:, 0]) * np.asarray(p.evaluate(nodes)),
+         'b-', label='dy/dx + p(x)*y (solution)')
 ax1.legend()
 
-ax2.plot(nodes, dy_numeric.evaluate(nodes), 'r-', label='dy/dx')
-ax2.plot(nodes[:], dy_solution[:], 'b-', label='dy/dx (solution)')
+ax2.plot(nodes, dy0_numeric.evaluate(nodes), 'r-', label='dy/dx')
+ax2.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
 ax2.legend()
 
-ax3.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
-ax3.plot(nodes[:], result[:, 0], 'b-', label='solution')
+ax3.plot(nodes, y0.evaluate(nodes), 'r-', label='y(x)')
+ax3.plot(nodes, result[:, 0], 'b-', label='solution')
 ax3.legend()
 
-ax4.plot(nodes[:], result[:, 1], 'g-o', label='residual')
+ax4.plot(nodes, result[:, 2], 'g-o', label='residual')
 ax4.legend()
 plt.show()
-print(np.mean(result[:, 1]))

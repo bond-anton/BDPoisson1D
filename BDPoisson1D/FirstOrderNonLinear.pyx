@@ -123,7 +123,7 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh_arrays(Mesh1DUniform mes
                                                             mesh.__boundary_condition_1, mesh.__boundary_condition_2,
                                                             mesh.j(), w)
     mesh.solution = result[:, 0]
-    mesh.residual = result[:, 1]
+    mesh.residual = result[:, 2]
 
 
 @boundscheck(False)
@@ -157,7 +157,7 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh(Mesh1DUniform mesh, Func
 @boundscheck(False)
 @wraparound(False)
 cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform mesh, Function y0, Function p,
-                                                                  Functional f, Functional df_dy,
+                                                                  Functional f, Functional df_dy, double w=1.0,
                                                                   int max_iter=1000, double threshold=1e-7):
     """
     Solves nonlinear 1D differential equation of the form
@@ -174,6 +174,7 @@ cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform 
     :param p: function p(x) callable on nodes array.
     :param f: callable of f(x) to be evaluated on nodes array.
     :param df_dy: function df/dy(x, y=y0) callable on nodes array.
+    :param w: Weight of Dy.
     :param max_iter: maximal number of allowed iterations.
     :param threshold: convergence residual error threshold.
     :return: mesh with solution y = y0 + w * Dy, and residual; callable solution function.
@@ -181,7 +182,7 @@ cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform 
     cdef:
         int i
     for i in range(max_iter):
-        dirichlet_non_linear_first_order_solver_mesh(mesh, y0, p, f, df_dy)
+        dirichlet_non_linear_first_order_solver_mesh(mesh, y0, p, f, df_dy, w)
         if abs(mesh.integrational_residual) <= threshold:  # or max(abs(np.asarray(dy))) <= 2 * np.finfo(np.float).eps:
             break
         y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)
@@ -191,7 +192,7 @@ cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform 
 @boundscheck(False)
 @wraparound(False)
 cpdef void dirichlet_non_linear_first_order_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function y0, Function p,
-                                                            Functional f, Functional df_dy,
+                                                            Functional f, Functional df_dy, double w=1.0,
                                                             int max_iter=1000,
                                                             double residual_threshold=1e-7,
                                                             double int_residual_threshold=1e-6,
@@ -203,6 +204,7 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh_amr(TreeMesh1DUniform me
     :param p: function p(x) callable on nodes array.
     :param f: callable of f(x) to be evaluated on nodes array.
     :param df_dy: function df/dy(x, y=y0) callable on nodes array.
+    :param w: Weight of Dy.
     :param max_iter: maximal number of allowed iterations.
     :param residual_threshold: algorithm convergence residual threshold value.
     :param int_residual_threshold: algorithm convergence integral residual threshold value.
@@ -220,7 +222,7 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh_amr(TreeMesh1DUniform me
         n = 0
         for mesh in meshes_tree.__tree[level]:
             n += 1
-            dirichlet_non_linear_first_order_solver_recurrent_mesh(mesh, y0, p, f, df_dy,
+            dirichlet_non_linear_first_order_solver_recurrent_mesh(mesh, y0, p, f, df_dy, w,
                                                                    max_iter, int_residual_threshold)
             y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)
             f.__f = y0
@@ -250,7 +252,7 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh_amr(TreeMesh1DUniform me
 cpdef TreeMesh1DUniform dirichlet_non_linear_first_order_solver_amr(double boundary_1, double boundary_2, double step,
                                                                     Function y0, Function p,
                                                                     Functional f, Functional df_dy,
-                                                                    double bc1, double bc2,
+                                                                    double bc1, double bc2, double w=1.0,
                                                                     int max_iter=1000,
                                                                     double residual_threshold=1e-3,
                                                                     double int_residual_threshold=1e-6,
@@ -267,6 +269,7 @@ cpdef TreeMesh1DUniform dirichlet_non_linear_first_order_solver_amr(double bound
     :param df_dy: callable for evaluation of df/dDy, where Dy is delta y for y0 correction.
     :param bc1: boundary condition at nodes[0] point (a number).
     :param bc2: boundary condition at nodes[n] point (a number).
+    :param w: Weight of Dy.
     :param max_iter: maximal number of allowed iterations.
     :param residual_threshold: convergence residual error threshold.
     :param int_residual_threshold: convergence integrational residual error threshold.
@@ -285,7 +288,7 @@ cpdef TreeMesh1DUniform dirichlet_non_linear_first_order_solver_amr(double bound
                               boundary_condition_2=bc2,
                               physical_step=round(step, 9))
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-    dirichlet_non_linear_first_order_solver_mesh_amr(meshes_tree, y0, f, p, df_dy,
+    dirichlet_non_linear_first_order_solver_mesh_amr(meshes_tree, y0, p, f, df_dy, w,
                                                      max_iter, residual_threshold, int_residual_threshold,
                                                      max_level, mesh_refinement_threshold)
     return meshes_tree
