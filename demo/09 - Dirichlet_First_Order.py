@@ -10,7 +10,8 @@ class TestFunction(Function):
     Some known differentiable function
     """
     def evaluate(self, x):
-        return -10 * np.sin(2 * np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
+        xx = np.asarray(x)
+        return -10 * np.sin(2 * np.pi * xx**2) / (2 * np.pi) + 3 * xx ** 2 + xx + 5
 
 
 class TestDerivative(Function):
@@ -18,7 +19,8 @@ class TestDerivative(Function):
     Some known differentiable function
     """
     def evaluate(self, x):
-        return -20 * np.asarray(x) * np.cos(2 * np.pi * np.asarray(x)**2) + 6 * np.asarray(x) + 1
+        xx = np.asarray(x)
+        return -20 * xx * np.cos(2 * np.pi * xx**2) + 6 * xx + 1
 
 
 class MixFunction(Function):
@@ -40,16 +42,26 @@ dy = dy_analytic
 
 start = -1.0
 stop = 2.0
-
-nodes = np.linspace(start, stop, num=501, endpoint=True)  # generate nodes
-p_nodes = p.evaluate(nodes)
-f_nodes = dy.evaluate(nodes) + p_nodes * y.evaluate(nodes)
 bc1 = y.evaluate(np.array([start]))[0]  # left Dirichlet boundary condition
 bc2 = y.evaluate(np.array([stop]))[0]  # right Dirichlet boundary condition
 
-result = dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes, bc1, bc2, j=1.0)  # solve Poisson equation
+hundreds = []
+errs = []
+for i in range(2, 20):
+    nodes = np.linspace(start, stop, num=100 * i + 1, endpoint=True)  # generate nodes
+    p_nodes = p.evaluate(nodes)
+    f_nodes = dy.evaluate(nodes) + p_nodes * y.evaluate(nodes)
+    result = dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes, bc1, bc2, j=1.0)  # solve Poisson equation
+    dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
+    hundreds.append(i)
+    errs.append(np.square(result[:, 1]).mean())
+    print(101 + i * 100, 'Mean Square ERR:', errs[-1])
 
-dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
+fig, ax = plt.subplots()
+ax.plot(hundreds, errs, 'r-o')
+ax.set_xlabel('Points number x100')
+ax.set_ylabel('Mean Square Error')
+plt.show()
 
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
@@ -65,7 +77,6 @@ ax3.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
 ax3.plot(nodes, result[:, 0], 'b-', label='solution')
 ax3.legend()
 
-ax4.plot(nodes[2:-2], result[2:-2, 1], 'g-o', label='residual')
+ax4.plot(nodes[:], result[:, 1], 'g-o', label='residual')
 ax4.legend()
 plt.show()
-print(np.mean(result[:, 1]))
