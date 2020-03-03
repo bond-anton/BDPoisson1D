@@ -79,30 +79,30 @@ bc2 = y.evaluate(np.array([stop]))[0]  # right Dirichlet boundary condition
 
 step = (stop - start) / (100 * 1)
 meshes = dirichlet_first_order_solver_amr(start, stop, step, p, f, bc1, bc2,
-                                          max_iter=1000, threshold=1e-2, max_level=20)
+                                          max_iter=1000, threshold=1e-3, max_level=20)
 flat_mesh = meshes.flatten()
 dy_solution = np.gradient(flat_mesh.solution, flat_mesh.physical_nodes, edge_order=2)
 
 # Plot the result
-fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, sharex=True)
+# fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, sharex=True)
+fig, (ax1, ax3, ax4, ax5) = plt.subplots(4)
 ax1.plot(flat_mesh.physical_nodes, f.evaluate(flat_mesh.physical_nodes), 'r-', label='f(x)')
 ax1.plot(flat_mesh.physical_nodes,
          dy_solution + np.asarray(flat_mesh.solution) * np.asarray(p.evaluate(flat_mesh.physical_nodes)),
          'b-', label='dy/dx + p(x)*y (solution)')
 ax1.legend()
-
-ax2.plot(flat_mesh.physical_nodes, dy_numeric.evaluate(flat_mesh.physical_nodes), 'g-', label='dy/dx')
-ax2.plot(flat_mesh.physical_nodes, dy_analytic.evaluate(flat_mesh.physical_nodes), 'r-', label='dy/dx')
-ax2.plot(flat_mesh.physical_nodes, dy_solution, 'b-', label='dy/dx (solution)')
-ax2.legend()
+#
+# ax2.plot(flat_mesh.physical_nodes, dy_numeric.evaluate(flat_mesh.physical_nodes), 'g-', label='dy/dx')
+# ax2.plot(flat_mesh.physical_nodes, dy_analytic.evaluate(flat_mesh.physical_nodes), 'r-', label='dy/dx')
+# ax2.plot(flat_mesh.physical_nodes, dy_solution, 'b-', label='dy/dx (solution)')
+# ax2.legend()
 
 ax3.plot(flat_mesh.physical_nodes, y.evaluate(flat_mesh.physical_nodes), 'r-', label='y(x)')
 ax3.plot(flat_mesh.physical_nodes, flat_mesh.solution, 'b-', label='solution')
 ax3.legend()
 
 plot_tree(meshes, ax4)
-
-ax5.plot(flat_mesh.physical_nodes, flat_mesh.residual, 'g-o', label='residual')
+ax5.plot(flat_mesh.physical_nodes[:], flat_mesh.residual[:], 'go', label='residual')
 ax5.legend()
 
 plt.show()

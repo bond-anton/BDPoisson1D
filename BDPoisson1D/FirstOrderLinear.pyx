@@ -46,10 +46,11 @@ cpdef double[:, :] dirichlet_first_order_solver_arrays(double[:] nodes, double[:
             du[i] = 1.0
         d[i] = j * (nodes[i + 2] - nodes[i]) * p_nodes[i + 1]
         f[i] = j * (nodes[i + 2] - nodes[i]) * f_nodes[i + 1]
-    d[0] = d[0] + 1
-    d[nn - 1] = d[nn - 1] + 1
-    f[0]  = f[0] + j * (nodes[1] - nodes[0]) * (f_nodes[0] - p_nodes[0] * bc1) + 2 * bc1
-    f[nn - 1]  = f[nn - 1] - j * (nodes[n - 1] - nodes[n - 2]) * (f_nodes[n - 1] - p_nodes[n - 1] * bc2)
+    d[0] += 1
+    f[0] += + j * (nodes[1] - nodes[0]) * (f_nodes[0] - p_nodes[0] * bc1) + 2 * bc1
+    d[nn - 1] += 1
+    f[nn - 1] += - j * (nodes[n - 1] - nodes[n - 2]) * (f_nodes[n - 1] - p_nodes[n - 1] * bc2)
+    # f[nn - 1] += j * (nodes[n - 1] - nodes[n - 2]) * (f_nodes[n - 1] - p_nodes[n - 1] * bc2) - 2 * bc2
     dgtsv(&nn, &nrhs, &dl[0], &d[0], &du[0], &f[0], &nn, &info)
     result[0, 0] = bc1
     result[n - 1, 0] = bc2

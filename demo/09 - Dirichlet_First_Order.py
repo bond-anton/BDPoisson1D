@@ -47,14 +47,15 @@ bc2 = y.evaluate(np.array([stop]))[0]  # right Dirichlet boundary condition
 
 hundreds = []
 errs = []
-for i in range(2, 20):
+for i in range(1, 20):
     nodes = np.linspace(start, stop, num=100 * i + 1, endpoint=True)  # generate nodes
     p_nodes = p.evaluate(nodes)
     f_nodes = dy.evaluate(nodes) + p_nodes * y.evaluate(nodes)
     result = dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes, bc1, bc2, j=1.0)  # solve Poisson equation
     dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
     hundreds.append(i)
-    errs.append(np.square(result[:, 1]).mean())
+    # errs.append(np.square(result[2:-2, 1]).mean())
+    errs.append(np.square(result[2:-2, 0] - y.evaluate(nodes[2:-2])).mean())
     print(101 + i * 100, 'Mean Square ERR:', errs[-1])
 
 fig, ax = plt.subplots()
@@ -77,6 +78,7 @@ ax3.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
 ax3.plot(nodes, result[:, 0], 'b-', label='solution')
 ax3.legend()
 
-ax4.plot(nodes[:], result[:, 1], 'g-o', label='residual')
+# ax4.plot(nodes[2:-2], result[2:-2, 1], 'g-o', label='residual')
+ax4.plot(nodes[2:-2], result[2:-2, 0] - y.evaluate(nodes[2:-2]), 'g-o', label='residual')
 ax4.legend()
 plt.show()
