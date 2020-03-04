@@ -86,13 +86,20 @@ p_nodes = p.evaluate(nodes)
 f_nodes = f.evaluate(nodes)
 df_dy_nodes = df_dy.evaluate(nodes)
 
-for i in range(100):
+w = 1.0
+min_w = 0.3
+mse_threshold = 1e-80
+i = 0
+max_iterations = 100
+mse_old = 1e20
+while i < max_iterations:
     # result = dirichlet_non_linear_first_order_solver_arrays(nodes, y_nodes, p_nodes,
     #                                                         f_nodes, df_dy_nodes,
-    #                                                         bc1, bc2, j=1.0, w=0.7)
-    result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=0.7)
+    #                                                         bc1, bc2, j=1.0, w=w)
+    result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=w)
+
     y = InterpolateFunction(nodes, result[:, 0])
-    dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
+
     f.f = y
     df_dy.f = y
 
@@ -101,6 +108,23 @@ for i in range(100):
     f_nodes = f.evaluate(nodes)
     df_dy_nodes = df_dy.evaluate(nodes)
 
+    mse = np.square(result[:, 1]).mean()
+    if mse > mse_old:
+        if w > min_w:
+            w -= 0.1
+            print(i, ' -> reduced W to', w)
+            continue
+        else:
+            print('Not converging anymore. W =', w)
+            break
+    if mse < mse_threshold:
+        break
+
+    mse_old = mse
+    i += 1
+print('Reached MSE:', mse, 'in', i, 'iterations.')
+
+dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 ax1.plot(nodes, f.evaluate(nodes), 'r-', label='f(x)')
@@ -116,6 +140,13 @@ ax3.plot(nodes, y0.evaluate(nodes), 'r-', label='y(x)')
 ax3.plot(nodes, result[:, 0], 'b-', label='solution')
 ax3.legend()
 
-ax4.plot(nodes, result[:, 2], 'g-o', label='residual')
+ax4.plot(nodes, result[:, 1], 'g-o', label='residual')
 ax4.legend()
+plt.show()
+
+print('Compare to analytic solution')
+print('MSE:', np.square(np.asarray(result[:, 0]) - np.asarray(y.evaluate(nodes[:]))).mean())
+
+fig, ax = plt.subplots()
+ax.plot(nodes, np.asarray(result[:, 0]) - np.asarray(y.evaluate(nodes[:])), 'g-o', label='residual')
 plt.show()

@@ -52,10 +52,9 @@ for i in range(1, 20):
     p_nodes = p.evaluate(nodes)
     f_nodes = dy.evaluate(nodes) + p_nodes * y.evaluate(nodes)
     result = dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes, bc1, bc2, j=1.0)  # solve Poisson equation
-    dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
+    dy_solution = np.gradient(result[:], nodes, edge_order=2)
     hundreds.append(i)
-    # errs.append(np.square(result[2:-2, 1]).mean())
-    errs.append(np.square(result[2:-2, 0] - y.evaluate(nodes[2:-2])).mean())
+    errs.append(np.square(result[2:-2] - y.evaluate(nodes[2:-2])).mean())
     print(101 + i * 100, 'Mean Square ERR:', errs[-1])
 
 fig, ax = plt.subplots()
@@ -67,7 +66,7 @@ plt.show()
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 ax1.plot(nodes, f_nodes, 'r-', label='f(x)')
-ax1.plot(nodes, dy_solution + np.asarray(result[:, 0]) * np.asarray(p_nodes), 'b-', label='dy/dx + p(x)*y (solution)')
+ax1.plot(nodes, dy_solution + np.asarray(result[:]) * np.asarray(p_nodes), 'b-', label='dy/dx + p(x)*y (solution)')
 ax1.legend()
 
 ax2.plot(nodes, dy_numeric.evaluate(nodes), 'r-', label='dy/dx')
@@ -75,10 +74,9 @@ ax2.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
 ax2.legend()
 
 ax3.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
-ax3.plot(nodes, result[:, 0], 'b-', label='solution')
+ax3.plot(nodes, result[:], 'b-', label='solution')
 ax3.legend()
 
-# ax4.plot(nodes[2:-2], result[2:-2, 1], 'g-o', label='residual')
-ax4.plot(nodes[2:-2], result[2:-2, 0] - y.evaluate(nodes[2:-2]), 'g-o', label='residual')
+ax4.plot(nodes[2:-2], result[2:-2] - y.evaluate(nodes[2:-2]), 'g-o', label='residual')
 ax4.legend()
 plt.show()

@@ -5,7 +5,7 @@ from cpython.array cimport array, clone
 
 from BDMesh.TreeMesh1DUniform cimport TreeMesh1DUniform
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
-from ._helpers cimport gradient1d, refinement_points
+from ._helpers cimport mean_square, gradient1d, refinement_points
 from .Function cimport Function, Functional, InterpolateFunction
 from .FirstOrderLinear cimport dirichlet_first_order_solver_arrays
 
@@ -36,14 +36,14 @@ cpdef double[:, :] dirichlet_non_linear_first_order_solver_arrays(double[:] node
     :param j: Jacobian.
     :param w: Weight of Dy.
     :return:
-        result: solution y = y0 + w * Dy; Dy; residual.
+        result: solution y = y0 + w * Dy; Dy.
     """
     cdef:
         int i, n = nodes.shape[0], nrhs = 1, info
         double bc1_l, bc2_l
-        double[:] dy, dy0
+        double[:] result_l, dy, dy0
         array[double] fl, pl, template = array('d')
-        double[:, :] result_l, result = np.empty((n, 3), dtype=np.double)
+        double[:, :] result = np.empty((n, 2), dtype=np.double)
     fl = clone(template, n, zero=False)
     pl = clone(template, n, zero=False)
     dy0 = gradient1d(y0_nodes, nodes)
@@ -54,11 +54,8 @@ cpdef double[:, :] dirichlet_non_linear_first_order_solver_arrays(double[:] node
     bc2_l = bc2 - y0_nodes[n - 1]
     result_l = dirichlet_first_order_solver_arrays(nodes, pl, fl, bc1_l, bc2_l, j)
     for i in range(n):
-        result[i, 0] = y0_nodes[i] + w * result_l[i, 0]
-        result[i, 1] = result_l[i, 0]
-    dy = gradient1d(result[:, 0], nodes)
-    for i in range(n):
-        result[i, 2] = f_nodes[i] - dy[i] / j - p_nodes[i] * result[i, 0]
+        result[i, 0] = y0_nodes[i] + w * result_l[i]
+        result[i, 1] = result_l[i]
     return result
 
 
@@ -87,7 +84,7 @@ cpdef double[:, :] dirichlet_non_linear_first_order_solver(double[:] nodes, Func
     :param j: Jacobian.
     :param w: Weight of Dy.
     :return:
-        result: solution y = y0 + w * Dy; Dy; residual.
+        result: solution y = y0 + w * Dy; Dy.
     """
     return dirichlet_non_linear_first_order_solver_arrays(nodes, y0.evaluate(nodes), p.evaluate(nodes),
                                                           f.evaluate(nodes), df_dy.evaluate(nodes),
@@ -123,7 +120,7 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh_arrays(Mesh1DUniform mes
                                                             mesh.__boundary_condition_1, mesh.__boundary_condition_2,
                                                             mesh.j(), w)
     mesh.solution = result[:, 0]
-    mesh.residual = result[:, 2]
+    mesh.residual = result[:, 1]
 
 
 @boundscheck(False)
@@ -157,7 +154,7 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh(Mesh1DUniform mesh, Func
 @boundscheck(False)
 @wraparound(False)
 cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform mesh, Function y0, Function p,
-                                                                  Functional f, Functional df_dy, double w=1.0,
+                                                                  Functional f, Functional df_dy, double w=0.0,
                                                                   int max_iter=1000, double threshold=1e-7):
     """
     Solves nonlinear 1D differential equation of the form
@@ -174,20 +171,42 @@ cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform 
     :param p: function p(x) callable on nodes array.
     :param f: callable of f(x) to be evaluated on nodes array.
     :param df_dy: function df/dy(x, y=y0) callable on nodes array.
-    :param w: Weight of Dy.
+    :param w: Weight of Dy in the range [0.0..1.0]. If w=0.0 weight is set automatically.
     :param max_iter: maximal number of allowed iterations.
     :param threshold: convergence residual error threshold.
-    :return: mesh with solution y = y0 + w * Dy, and residual; callable solution function.
+    :return: mesh with solution y = y0 + w * Dy, and Dy as a residual; callable solution function.
     """
     cdef:
         int i
-    for i in range(max_iter):
+        bint auto
+        double res, res_old = 1e100, min_w = 0.3
+    if w <= 0:
+        auto = True
+        w = 1.0
+    elif w >= 1.0:
+        auto = False
+        w = 1.0
+    else:
+        auto = False
+    i = 0
+    while i < max_iter:
         dirichlet_non_linear_first_order_solver_mesh(mesh, y0, p, f, df_dy, w)
-        if abs(mesh.integrational_residual) <= threshold:  # or max(abs(np.asarray(dy))) <= 2 * np.finfo(np.float).eps:
-            break
         y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)
         f.__f = y0
         df_dy.__f = y0
+        res = mean_square(mesh.residual)
+        if res <= threshold:
+            break
+        if auto:
+            if res > res_old:
+                if w > min_w:
+                    w -= 0.1
+                    continue
+                else:
+                    break
+            res_old = res
+
+        i += 1
 
 @boundscheck(False)
 @wraparound(False)
@@ -204,7 +223,7 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh_amr(TreeMesh1DUniform me
     :param p: function p(x) callable on nodes array.
     :param f: callable of f(x) to be evaluated on nodes array.
     :param df_dy: function df/dy(x, y=y0) callable on nodes array.
-    :param w: Weight of Dy.
+    :param w: Weight of Dy in the range [0.0..1.0]. If w=0.0 weight is set automatically.
     :param max_iter: maximal number of allowed iterations.
     :param residual_threshold: algorithm convergence residual threshold value.
     :param int_residual_threshold: algorithm convergence integral residual threshold value.

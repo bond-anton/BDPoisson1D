@@ -1,5 +1,4 @@
 from .FirstOrderLinear import dirichlet_first_order_solver, dirichlet_first_order_solver_mesh
-from .FirstOrderLinear import dirichlet_first_order_solver_amr
 from .DirichletLinear import dirichlet_poisson_solver, dirichlet_poisson_solver_mesh
 from .DirichletLinear import dirichlet_poisson_solver_amr
 from .DirichletNonLinear import dirichlet_non_linear_poisson_solver, dirichlet_non_linear_poisson_solver_mesh

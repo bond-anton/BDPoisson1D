@@ -79,7 +79,7 @@ df_dy = TestFunctionalDf(y)
 
 root_mesh = Mesh1DUniform(start, stop, bc1, bc2, 0.001)
 
-dirichlet_non_linear_first_order_solver_recurrent_mesh(root_mesh, y, p, f, df_dy, w=0.8, max_iter=100, threshold=1e-200)
+dirichlet_non_linear_first_order_solver_recurrent_mesh(root_mesh, y, p, f, df_dy, w=0.0, max_iter=100, threshold=1e-14)
 y = InterpolateFunction(root_mesh.physical_nodes, root_mesh.solution)
 
 mesh_refinement_threshold = 1e-7

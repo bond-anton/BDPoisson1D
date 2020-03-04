@@ -1,6 +1,8 @@
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 
 cdef double trapz_1d(double[:] y, double[:] x)
+cdef double mean_square(double[:] x)
+cdef double mean_square_root(double[:] x)
 cdef double[:] interp_1d(double[:] x_new, double[:] x, double[:] y)
 cdef double[:] gradient1d(double[:] y, double[:] x)
 cdef int refinement_chunks(Mesh1DUniform mesh, double threshold)

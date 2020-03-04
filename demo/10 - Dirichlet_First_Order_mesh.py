@@ -66,7 +66,7 @@ for i in range(2, 20):
     dirichlet_first_order_solver_mesh(root_mesh, p, f)
     dy_solution = np.gradient(root_mesh.solution, root_mesh.physical_nodes, edge_order=2)
     hundreds.append(i)
-    errs.append(np.square(root_mesh.residual).mean())
+    errs.append(np.square(y.evaluate(root_mesh.physical_nodes) - root_mesh.solution).mean())
     print(101 + i * 100, 'Mean Square ERR:', errs[-1])
 
 fig, ax = plt.subplots()
@@ -92,6 +92,6 @@ ax3.plot(root_mesh.physical_nodes, y.evaluate(root_mesh.physical_nodes), 'r-', l
 ax3.plot(root_mesh.physical_nodes, root_mesh.solution, 'b-', label='solution')
 ax3.legend()
 
-ax4.plot(root_mesh.physical_nodes, root_mesh.residual, 'g-o', label='residual')
+ax4.plot(root_mesh.physical_nodes, y.evaluate(root_mesh.physical_nodes) - root_mesh.solution, 'g-o', label='residual')
 ax4.legend()
 plt.show()

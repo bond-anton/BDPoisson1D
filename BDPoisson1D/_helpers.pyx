@@ -1,6 +1,6 @@
 import numpy as np
 
-from libc.math cimport fabs, ceil, round
+from libc.math cimport fabs, ceil, round, sqrt
 from cython cimport boundscheck, wraparound
 from cpython.array cimport array, clone
 
@@ -16,6 +16,21 @@ cdef double trapz_1d(double[:] y, double[:] x):
     for i in range(nx - 1):
         res += (x[i + 1] - x[i]) * (y[i + 1] + y[i]) / 2
     return res
+
+
+@boundscheck(False)
+@wraparound(False)
+cdef double mean_square(double[:] x):
+    cdef:
+        int n = x.shape[0], i
+        double res = 0.0
+    for i in range(n):
+        res += x[i] * x[i]
+    return res / n
+
+
+cdef double mean_square_root(double[:] x):
+    return sqrt(mean_square(x))
 
 
 @boundscheck(False)
