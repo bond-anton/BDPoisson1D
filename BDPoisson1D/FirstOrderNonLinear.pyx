@@ -5,7 +5,7 @@ from cpython.array cimport array, clone
 
 from BDMesh.TreeMesh1DUniform cimport TreeMesh1DUniform
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
-from ._helpers cimport mean_square, gradient1d, refinement_points
+from ._helpers cimport mean_square_root, gradient1d, refinement_points
 from .Function cimport Function, Functional, InterpolateFunction
 from .FirstOrderLinear cimport dirichlet_first_order_solver_arrays
 
@@ -194,7 +194,7 @@ cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform 
         y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)
         f.__f = y0
         df_dy.__f = y0
-        res = mean_square(mesh.residual)
+        res = mean_square_root(mesh.residual)
         if res <= threshold:
             break
         if auto:
@@ -205,7 +205,6 @@ cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform 
                 else:
                     break
             res_old = res
-
         i += 1
 
 @boundscheck(False)
@@ -241,6 +240,7 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh_amr(TreeMesh1DUniform me
         n = 0
         for mesh in meshes_tree.__tree[level]:
             n += 1
+            print(w)
             dirichlet_non_linear_first_order_solver_recurrent_mesh(mesh, y0, p, f, df_dy, w,
                                                                    max_iter, int_residual_threshold)
             y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)

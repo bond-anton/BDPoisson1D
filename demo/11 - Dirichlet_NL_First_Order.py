@@ -71,21 +71,57 @@ dy0_numeric = NumericGradient(y0)
 shift = np.pi * 11 + 1
 start = -3 * np.pi / 2 + shift
 stop = 3 * np.pi / 2 + shift + 0.5
-nodes = np.linspace(start, stop, num=1001, endpoint=True)  # generate nodes
-bc1 = y0.evaluate([nodes[0]])[0]
-bc2 = y0.evaluate([nodes[-1]])[0]
-
+bc1 = y0.evaluate([start])[0]
+bc2 = y0.evaluate([stop])[0]
 y = GuessFunction()
 p = MixFunction()
-
 f = TestFunctional(y)
 df_dy = TestFunctionalDf(y)
+w = 0.7
+hundreds = []
+errs = []
+for i in range(1, 200):
+    nodes = np.linspace(start, stop, num=100 * i + 1, endpoint=True)  # generate nodes
+    y_nodes = y.evaluate(nodes)
+    p_nodes = p.evaluate(nodes)
+    f_nodes = f.evaluate(nodes)
+    df_dy_nodes = df_dy.evaluate(nodes)
 
-y_nodes = y.evaluate(nodes)
-p_nodes = p.evaluate(nodes)
-f_nodes = f.evaluate(nodes)
-df_dy_nodes = df_dy.evaluate(nodes)
+    # result = dirichlet_non_linear_first_order_solver_arrays(nodes, y_nodes, p_nodes,
+    #                                                         f_nodes, df_dy_nodes,
+    #                                                         bc1, bc2, j=1.0, w=w)
+    result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=w)
+    mse = np.sqrt(np.square(result[:, 1]).mean())
+    hundreds.append(i)
+    errs.append(mse)
+    print(101 + i * 100, 'Mean Square ERR:', errs[-1])
+errs = np.array(errs)
+mean_errs = errs.mean()
+hundreds = np.array(hundreds)
+fig, (ax1, ax2) = plt.subplots(2)
+ax1.plot(hundreds, errs, 'r-o')
+ax1.plot(hundreds[[0, -1]], [mean_errs] * 2, 'b-')
+ax1.set_xlabel('Points number x100')
+ax1.set_ylabel('Mean Square Error')
 
+bin_size = 5
+bins = []
+std_errs = []
+i = 0
+while i < hundreds.shape[0] - 1:
+    if i + bin_size < hundreds.shape[0] - 1:
+        di = bin_size
+    else:
+        di = hundreds.shape[0] - 1 - i
+    bins.append(hundreds[i:i + di].mean())
+    std_errs.append(np.sqrt(np.square(errs[i:i + di] - mean_errs).mean()))
+    i += di
+ax2.plot(bins, std_errs, 'r-o')
+ax2.set_xlabel('Points number x100')
+ax2.set_ylabel('Mean Square Error STD')
+plt.show()
+
+nodes = np.linspace(start, stop, num=1001, endpoint=True)  # generate nodes
 w = 1.0
 min_w = 0.3
 mse_threshold = 1e-80
@@ -108,7 +144,7 @@ while i < max_iterations:
     f_nodes = f.evaluate(nodes)
     df_dy_nodes = df_dy.evaluate(nodes)
 
-    mse = np.square(result[:, 1]).mean()
+    mse = np.sqrt(np.square(result[:, 1]).mean())
     if mse > mse_old:
         if w > min_w:
             w -= 0.1

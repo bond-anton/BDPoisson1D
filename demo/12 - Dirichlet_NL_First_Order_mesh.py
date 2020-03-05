@@ -1,7 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_mesh
 from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_recurrent_mesh
 from BDPoisson1D import Function, Functional, NumericGradient, InterpolateFunction
 from BDMesh import Mesh1DUniform
@@ -79,7 +78,7 @@ df_dy = TestFunctionalDf(y)
 
 root_mesh = Mesh1DUniform(start, stop, bc1, bc2, 0.001)
 
-dirichlet_non_linear_first_order_solver_recurrent_mesh(root_mesh, y, p, f, df_dy, w=0.0, max_iter=100, threshold=1e-14)
+dirichlet_non_linear_first_order_solver_recurrent_mesh(root_mesh, y, p, f, df_dy, w=0.0, max_iter=100, threshold=1e-7)
 y = InterpolateFunction(root_mesh.physical_nodes, root_mesh.solution)
 
 mesh_refinement_threshold = 1e-7

@@ -96,9 +96,9 @@ p = MixFunction()
 f = TestFunctional(y)
 df_dy = TestFunctionalDf(y)
 
-Meshes = dirichlet_non_linear_first_order_solver_amr(start, stop, step, y, p, f, df_dy, bc1, bc2, w=0.7,
-                                                     max_iter=100, residual_threshold=1.5e-8,
-                                                     int_residual_threshold=1e-13,
+Meshes = dirichlet_non_linear_first_order_solver_amr(start, stop, step, y, p, f, df_dy, bc1, bc2, w=0.0,
+                                                     max_iter=100, residual_threshold=1e-8,
+                                                     int_residual_threshold=1e-7,
                                                      max_level=10, mesh_refinement_threshold=1e-7)
 
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)

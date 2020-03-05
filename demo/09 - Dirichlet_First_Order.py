@@ -54,7 +54,7 @@ for i in range(1, 20):
     result = dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes, bc1, bc2, j=1.0)  # solve Poisson equation
     dy_solution = np.gradient(result[:], nodes, edge_order=2)
     hundreds.append(i)
-    errs.append(np.square(result[2:-2] - y.evaluate(nodes[2:-2])).mean())
+    errs.append(np.sqrt(np.square(result[2:-2] - y.evaluate(nodes[2:-2])).mean()))
     print(101 + i * 100, 'Mean Square ERR:', errs[-1])
 
 fig, ax = plt.subplots()
