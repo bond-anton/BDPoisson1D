@@ -1,115 +1,282 @@
 import numpy as np
 
 from BDMesh import Mesh1DUniform
-from BDPoisson1D.FirstOrderLinear import dirichlet_first_order_solver_arrays, dirichlet_first_order_solver
-from BDPoisson1D.FirstOrderLinear import dirichlet_first_order_solver_mesh_arrays, dirichlet_first_order_solver_mesh
-from BDPoisson1D.Function import Function, NumericGradient
+from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_arrays
+from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver
+from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_mesh_arrays
+from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_mesh
+from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_recurrent_mesh
+from BDPoisson1D.Function import Function, Functional, NumericGradient, InterpolateFunction
 
 import unittest
 
 
 class TestFunction(Function):
+    """
+    Some known differentiable function
+    """
+
     def evaluate(self, x):
-        return -10 * np.sin(np.pi * np.array(x) ** 2) / (2 * np.pi) + 3 * np.array(x) ** 2 + np.array(x) + 5
+        xx = np.asarray(x)
+        return np.sin(xx) ** 2
+
+
+class TestFunctional(Functional):
+    """
+    f(x, y), RHS of the ODE
+    """
+
+    def evaluate(self, x):
+        xx = np.asarray(x)
+        yy = np.asarray(self.f.evaluate(x))
+        result = np.empty_like(yy)
+        idc = np.where(yy >= 0.5)
+        ids = np.where(yy < 0.5)
+        result[ids] = 2 * np.sign(np.cos(xx[ids])) * np.sin(xx[ids]) * np.sqrt(1 - yy[ids])
+        result[idc] = 2 * np.sign(np.sin(xx[idc])) * np.cos(xx[idc]) * np.sqrt(yy[idc])
+        return result
+
+
+class TestFunctionalDf(Functional):
+    """
+    df/dy(x, y)
+    """
+
+    def evaluate(self, x):
+        xx = np.asarray(x)
+        yy = np.asarray(self.f.evaluate(x))
+        result = np.empty_like(yy)
+        idc = np.where(yy >= 0.5)
+        ids = np.where(yy < 0.5)
+        result[ids] = -np.sign(np.cos(xx[ids])) * np.sin(xx[ids]) / np.sqrt(1 - yy[ids])
+        result[idc] = np.sign(np.sin(xx[idc])) * np.cos(xx[idc]) / np.sqrt(yy[idc])
+        return result
 
 
 class MixFunction(Function):
     """
     Some known differentiable function
     """
-    def evaluate(self, x):
-        # return np.ones(x.shape[0], dtype=np.double)
-        # return np.zeros(x.shape[0], dtype=np.double)
-        return np.asarray(x)**2 * np.cos(np.asarray(x))
-
-
-class FFunction(Function):
-
-    def __init__(self, p, y, dy):
-        self.p = p
-        self.y = y
-        self.dy = dy
 
     def evaluate(self, x):
-        return self.dy.evaluate(x) + self.p.evaluate(x) * self.y.evaluate(x)
+        return np.zeros(x.shape[0], dtype=np.double)
 
 
-class TestDirichletFirstOrder(unittest.TestCase):
+class GuessFunction(Function):
+    """
+    Some known differentiable function
+    """
+
+    def evaluate(self, x):
+        return np.zeros(x.shape[0], dtype=np.double)
+
+
+class TestDirichletFirstOrderNL(unittest.TestCase):
 
     def setUp(self):
-        self.y = TestFunction()
-        self.dy_numeric = NumericGradient(self.y)
+        self.y0 = TestFunction()
+        self.dy0_numeric = NumericGradient(self.y0)
         self.p = MixFunction()
-        self.f = FFunction(self.p, self.y, self.dy_numeric)
 
     def test_dirichlet_first_order_solver_arrays(self):
-        start = -1.0
-        stop = 2.0
+        shift = np.pi * 11 + 1
+        start = -3 * np.pi / 2 + shift
+        stop = 3 * np.pi / 2 + shift + 0.5
+        bc1 = self.y0.evaluate([start])[0]
+        bc2 = self.y0.evaluate([stop])[0]
 
-        nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
-        p_nodes = self.p.evaluate(nodes)
-        f_nodes = self.dy_numeric.evaluate(nodes) + p_nodes * self.y.evaluate(nodes)
-        bc1 = self.y.evaluate([start])[0]  # left Dirichlet boundary condition
-        bc2 = self.y.evaluate([stop])[0]  # right Dirichlet boundary condition
+        y = GuessFunction()
+        p = MixFunction()
+        f = TestFunctional(y)
+        df_dy = TestFunctionalDf(y)
+        nodes = np.linspace(start, stop, num=1001, endpoint=True)  # generate nodes
+        y_nodes = y.evaluate(nodes)
+        p_nodes = p.evaluate(nodes)
+        f_nodes = f.evaluate(nodes)
+        df_dy_nodes = df_dy.evaluate(nodes)
+        w = 1.0
+        min_w = 0.3
+        mse_threshold = 1e-15
+        i = 0
+        max_iterations = 100
+        mse_old = 1e20
+        while i < max_iterations:
+            result = dirichlet_non_linear_first_order_solver_arrays(nodes, y_nodes, p_nodes,
+                                                                    f_nodes, df_dy_nodes,
+                                                                    bc1, bc2, j=1.0, w=w)
+            y = InterpolateFunction(nodes, result[:, 0])
 
-        result_1 = np.asarray(dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes,
-                                                                  bc1, bc2, j=1))
-        err1 = np.abs(np.square(result_1 - self.y.evaluate(nodes)).mean())
-        nodes = np.linspace(start, stop, num=501, endpoint=True)
-        p_nodes = self.p.evaluate(nodes)
-        f_nodes = self.dy_numeric.evaluate(nodes) + p_nodes * self.y.evaluate(nodes)
-        result_2 = np.asarray(dirichlet_first_order_solver_arrays(nodes, p_nodes, f_nodes,
-                                                                  bc1, bc2, j=1))
-        err2 = np.abs(np.square(result_2 - self.y.evaluate(nodes)).mean())
-        self.assertTrue(err1 > err2)
+            f.f = y
+            df_dy.f = y
+
+            y_nodes = y.evaluate(nodes)
+            p_nodes = p.evaluate(nodes)
+            f_nodes = f.evaluate(nodes)
+            df_dy_nodes = df_dy.evaluate(nodes)
+
+            mse = np.sqrt(np.square(result[:, 1]).mean())
+            if mse > mse_old:
+                if w > min_w:
+                    w -= 0.1
+                    print(i, ' -> reduced W to', w)
+                    continue
+                else:
+                    print('Not converging anymore. W =', w)
+                    break
+            if mse < mse_threshold:
+                break
+
+            mse_old = mse
+            i += 1
+        print('reached mse:', mse, 'in', i, 'iterations')
+        self.assertTrue(mse < mse_threshold)
 
     def test_dirichlet_first_order_solver(self):
-        start = -1.0
-        stop = 2.0
+        shift = np.pi * 11 + 1
+        start = -3 * np.pi / 2 + shift
+        stop = 3 * np.pi / 2 + shift + 0.5
+        bc1 = self.y0.evaluate([start])[0]
+        bc2 = self.y0.evaluate([stop])[0]
 
-        nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
-        bc1 = self.y.evaluate([start])[0]  # left Dirichlet boundary condition
-        bc2 = self.y.evaluate([stop])[0]  # right Dirichlet boundary condition
+        y = GuessFunction()
+        p = MixFunction()
+        f = TestFunctional(y)
+        df_dy = TestFunctionalDf(y)
+        nodes = np.linspace(start, stop, num=1001, endpoint=True)  # generate nodes
+        w = 1.0
+        min_w = 0.3
+        mse_threshold = 1e-15
+        i = 0
+        max_iterations = 100
+        mse_old = 1e20
+        while i < max_iterations:
+            result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=w)
+            y = InterpolateFunction(nodes, result[:, 0])
+            f.f = y
+            df_dy.f = y
 
-        result_1 = np.asarray(dirichlet_first_order_solver(nodes, self.p, self.f,
-                                                           bc1, bc2, j=1))
-        err1 = np.abs(np.square(result_1 - self.y.evaluate(nodes)).mean())
-        nodes = np.linspace(start, stop, num=501, endpoint=True)
-        result_2 = np.asarray(dirichlet_first_order_solver(nodes, self.p, self.f,
-                                                           bc1, bc2, j=1))
-        err2 = np.abs(np.square(result_2 - self.y.evaluate(nodes)).mean())
-        self.assertTrue(err1 > err2)
+            mse = np.sqrt(np.square(result[:, 1]).mean())
+            if mse > mse_old:
+                if w > min_w:
+                    w -= 0.1
+                    print(i, ' -> reduced W to', w)
+                    continue
+                else:
+                    print('Not converging anymore. W =', w)
+                    break
+            if mse < mse_threshold:
+                break
+
+            mse_old = mse
+            i += 1
+        print('reached mse:', mse, 'in', i, 'iterations')
+        self.assertTrue(mse < mse_threshold)
+
+    def test_dirichlet_first_order_solver_mesh_arrays(self):
+        shift = np.pi * 11 + 1
+        start = -3 * np.pi / 2 + shift
+        stop = 3 * np.pi / 2 + shift + 0.5
+        bc1 = self.y0.evaluate([start])[0]
+        bc2 = self.y0.evaluate([stop])[0]
+
+        y = GuessFunction()
+        p = MixFunction()
+        f = TestFunctional(y)
+        df_dy = TestFunctionalDf(y)
+        root_mesh = Mesh1DUniform(start, stop, bc1, bc2, num=1001)
+        y_nodes = y.evaluate(root_mesh.physical_nodes)
+        p_nodes = p.evaluate(root_mesh.physical_nodes)
+        f_nodes = f.evaluate(root_mesh.physical_nodes)
+        df_dy_nodes = df_dy.evaluate(root_mesh.physical_nodes)
+        w = 1.0
+        min_w = 0.3
+        mse_threshold = 1e-15
+        i = 0
+        max_iterations = 100
+        mse_old = 1e20
+        while i < max_iterations:
+            dirichlet_non_linear_first_order_solver_mesh_arrays(root_mesh, y_nodes, p_nodes,
+                                                                f_nodes, df_dy_nodes, w=w)
+            y = InterpolateFunction(root_mesh.physical_nodes, root_mesh.solution)
+
+            f.f = y
+            df_dy.f = y
+
+            y_nodes = y.evaluate(root_mesh.physical_nodes)
+            p_nodes = p.evaluate(root_mesh.physical_nodes)
+            f_nodes = f.evaluate(root_mesh.physical_nodes)
+            df_dy_nodes = df_dy.evaluate(root_mesh.physical_nodes)
+
+            mse = np.sqrt(np.square(root_mesh.residual).mean())
+            if mse > mse_old:
+                if w > min_w:
+                    w -= 0.1
+                    print(i, ' -> reduced W to', w)
+                    continue
+                else:
+                    print('Not converging anymore. W =', w)
+                    break
+            if mse < mse_threshold:
+                break
+
+            mse_old = mse
+            i += 1
+        print('reached mse:', mse, 'in', i, 'iterations')
+        self.assertTrue(mse < mse_threshold)
 
     def test_dirichlet_first_order_solver_mesh(self):
-        start = -1.0
-        stop = 2.0
-        mesh_1 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
-                               physical_step=0.02)
-        dirichlet_first_order_solver_mesh_arrays(mesh_1, self.p.evaluate(mesh_1.physical_nodes),
-                                                 self.f.evaluate(mesh_1.physical_nodes))
-        err1 = np.abs(np.square(mesh_1.solution - self.y.evaluate(mesh_1.physical_nodes)).mean())
+        shift = np.pi * 11 + 1
+        start = -3 * np.pi / 2 + shift
+        stop = 3 * np.pi / 2 + shift + 0.5
+        bc1 = self.y0.evaluate([start])[0]
+        bc2 = self.y0.evaluate([stop])[0]
 
-        mesh_2 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
-                               physical_step=0.01)
-        dirichlet_first_order_solver_mesh_arrays(mesh_2, self.p.evaluate(mesh_2.physical_nodes),
-                                                 self.f.evaluate(mesh_2.physical_nodes))
-        err2 = np.abs(np.square(mesh_2.solution - self.y.evaluate(mesh_2.physical_nodes)).mean())
-        self.assertTrue(err1 > err2)
+        y = GuessFunction()
+        p = MixFunction()
+        f = TestFunctional(y)
+        df_dy = TestFunctionalDf(y)
+        root_mesh = Mesh1DUniform(start, stop, bc1, bc2, num=1001)
+        w = 1.0
+        min_w = 0.3
+        mse_threshold = 1e-15
+        i = 0
+        max_iterations = 100
+        mse_old = 1e20
+        while i < max_iterations:
+            dirichlet_non_linear_first_order_solver_mesh(root_mesh, y, p, f, df_dy, w=w)
+            y = InterpolateFunction(root_mesh.physical_nodes, root_mesh.solution)
+            f.f = y
+            df_dy.f = y
 
-        mesh_1 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
-                               physical_step=0.02)
-        dirichlet_first_order_solver_mesh(mesh_1, self.p, self.f)
-        err1 = np.abs(np.square(mesh_1.solution - self.y.evaluate(mesh_1.physical_nodes)).mean())
-        mesh_2 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
-                               physical_step=0.01)
-        dirichlet_first_order_solver_mesh(mesh_2, self.p, self.f)
-        err2 = np.abs(np.square(mesh_2.solution - self.y.evaluate(mesh_2.physical_nodes)).mean())
-        self.assertTrue(err1 > err2)
+            mse = np.sqrt(np.square(root_mesh.residual).mean())
+            if mse > mse_old:
+                if w > min_w:
+                    w -= 0.1
+                    print(i, ' -> reduced W to', w)
+                    continue
+                else:
+                    print('Not converging anymore. W =', w)
+                    break
+            if mse < mse_threshold:
+                break
+
+            mse_old = mse
+            i += 1
+        print('reached mse:', mse, 'in', i, 'iterations')
+        self.assertTrue(mse < mse_threshold)
+
+    def test_dirichlet_first_order_solver_recurrent_mesh(self):
+        shift = np.pi * 11 + 1
+        start = -3 * np.pi / 2 + shift
+        stop = 3 * np.pi / 2 + shift + 0.5
+        bc1 = self.y0.evaluate([start])[0]
+        bc2 = self.y0.evaluate([stop])[0]
+
+        y = GuessFunction()
+        p = MixFunction()
+        f = TestFunctional(y)
+        df_dy = TestFunctionalDf(y)
+        root_mesh = Mesh1DUniform(start, stop, bc1, bc2, num=1001)
+        dirichlet_non_linear_first_order_solver_recurrent_mesh(root_mesh, y, p, f, df_dy, w=0.0, max_iter=100,
+                                                               threshold=1e-7)
+        self.assertTrue(np.sqrt(np.square(root_mesh.residual).mean()) < 1e-7)
