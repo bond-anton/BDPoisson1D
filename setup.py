@@ -1,3 +1,5 @@
+import sys
+
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from setuptools.command.build_ext import build_ext
@@ -29,6 +31,16 @@ extensions = [
         'BDPoisson1D._helpers',
         ['BDPoisson1D/_helpers.pyx'],
         depends=['BDPoisson1D/_helpers.pxd'],
+    ),
+    Extension(
+        'BDPoisson1D.FirstOrderLinear',
+        ['BDPoisson1D/FirstOrderLinear.pyx'],
+        depends=['BDPoisson1D/FirstOrderLinear.pxd'],
+    ),
+    Extension(
+        'BDPoisson1D.FirstOrderNonLinear',
+        ['BDPoisson1D/FirstOrderNonLinear.pyx'],
+        depends=['BDPoisson1D/FirstOrderNonLinear.pxd'],
     ),
     Extension(
         'BDPoisson1D.DirichletLinear',
@@ -127,10 +139,11 @@ setup(
     keywords='FiniteDifference PDE Poisson',
 
     packages=find_packages(exclude=['demo', 'tests', 'docs', 'contrib', 'venv']),
-    ext_modules=cythonize('BDPoisson1D/*.pyx', compiler_directives={'language_level': 3}),
-    package_data={'BDPoisson1D': ['DirichletLinear.pxd', 'DirichletNonLinear.pxd',
-                                  'NeumannLinear.pxd', 'NeumannNonLinear.pxd',
-                                  'Function.pxd']},
+    ext_modules=cythonize(extensions, compiler_directives={'language_level': sys.version_info[0]}),
+    package_data={'BDPoisson1D': ['FirstOrderLinear.pxd', 'FirstOrderNonLinear.pxd',
+                                  'DirichletLinear.pxd', 'DirichletNonLinear.pxd',
+                                  'NeumannLinear.pxd',
+                                  'Function.pxd', '_helpers.pxd']},
     setup_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'BDMesh>=0.2.4'],
     install_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.4'],
     test_suite='nose.collector',
