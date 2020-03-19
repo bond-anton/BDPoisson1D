@@ -131,6 +131,7 @@ setup(
     package_data={'BDPoisson1D': ['DirichletLinear.pxd', 'DirichletNonLinear.pxd',
                                   'NeumannLinear.pxd', 'NeumannNonLinear.pxd',
                                   'Function.pxd']},
+    setup_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'BDMesh>=0.2.4'],
     install_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.4'],
     test_suite='nose.collector',
     cmdclass={'build_ext': CustomBuildExt},
