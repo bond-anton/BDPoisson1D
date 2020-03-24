@@ -1,6 +1,7 @@
-from .Function cimport Function
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 from BDMesh.TreeMesh1DUniform cimport TreeMesh1DUniform
+from BDFunction1D cimport Function
+
 
 cpdef double[:, :] neumann_poisson_solver_arrays(double[:] nodes, double[:] f_nodes,
                                     double bc1, double bc2, double j=*, double y0=*)

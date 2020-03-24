@@ -1,6 +1,11 @@
+import math as m
 import numpy as np
 
 from BDMesh import Mesh1DUniform
+from BDFunction1D import Function
+from BDFunction1D.Functional import Functional
+from BDFunction1D.Interpolation import InterpolateFunction
+
 from BDPoisson1D.DirichletNonLinear import dirichlet_non_linear_poisson_solver_arrays
 from BDPoisson1D.DirichletNonLinear import dirichlet_non_linear_poisson_solver
 from BDPoisson1D.DirichletNonLinear import dirichlet_non_linear_poisson_solver_mesh_arrays
@@ -8,14 +13,12 @@ from BDPoisson1D.DirichletNonLinear import dirichlet_non_linear_poisson_solver_m
 from BDPoisson1D.DirichletNonLinear import dirichlet_non_linear_poisson_solver_recurrent_mesh
 from BDPoisson1D.DirichletNonLinear import dirichlet_non_linear_poisson_solver_amr
 
-from BDPoisson1D.Function import Function, Functional, InterpolateFunction
-
 import unittest
 
 
 class testPsi(Function):
-    def evaluate(self, x):
-        return np.exp(-np.asarray(x) * 3.0)
+    def evaluate_point(self, x):
+        return m.exp(-x * 3.0)
 
 
 class testF(Functional):
@@ -25,8 +28,8 @@ class testF(Functional):
         self.Nd = Nd
         self.kT = kT
 
-    def evaluate(self, x):
-        return self.Nd * (1 - (np.exp(-np.asarray(self.f.evaluate(np.asarray(x))) / self.kT)))
+    def evaluate_point(self, x):
+        return self.Nd * (1 - (m.exp(-self.f.evaluate_point(x) / self.kT)))
 
 
 class testdFdPsi(Functional):
@@ -36,8 +39,8 @@ class testdFdPsi(Functional):
         self.Nd = Nd
         self.kT = kT
 
-    def evaluate(self, x):
-        return self.Nd / self.kT * np.exp(-np.asarray(self.f.evaluate(np.asarray(x))) / self.kT)
+    def evaluate_point(self, x):
+        return self.Nd / self.kT * m.exp(-self.f.evaluate_point(x) / self.kT)
 
 
 class TestDirichletNL(unittest.TestCase):

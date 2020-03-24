@@ -57,11 +57,6 @@ extensions = [
         ['BDPoisson1D/NeumannLinear.pyx'],
         depends=['BDPoisson1D/NeumannLinear.pxd'],
     ),
-    Extension(
-        'BDPoisson1D.Function',
-        ['BDPoisson1D/Function.pyx'],
-        depends=['BDPoisson1D/Function.pxd'],
-    ),
 ]
 
 copt = {'msvc': ['/openmp', '/Ox', '/fp:fast', '/favor:INTEL64', '/Og'],
@@ -133,7 +128,7 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
 
     keywords='FiniteDifference PDE Poisson',
@@ -144,8 +139,8 @@ setup(
                                   'DirichletLinear.pxd', 'DirichletNonLinear.pxd',
                                   'NeumannLinear.pxd',
                                   'Function.pxd', '_helpers.pxd']},
-    setup_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'BDMesh>=0.2.11'],
-    install_requires=['numpy', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.11'],
+    setup_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'BDMesh>=0.2.11', 'BDFunction1D>=0.0.2'],
+    install_requires=['numpy', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.11', 'BDFunction1D>=0.0.2'],
     test_suite='nose.collector',
     cmdclass={'build_ext': CustomBuildExt},
     tests_require=['nose']

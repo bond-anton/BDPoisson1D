@@ -4,8 +4,10 @@ from cython cimport boundscheck, wraparound
 from cpython.array cimport array, clone
 
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
+from BDFunction1D cimport Function
+from BDFunction1D.Functional cimport Functional
+from BDFunction1D.Interpolation cimport InterpolateFunction
 from ._helpers cimport mean_square_root, gradient1d
-from .Function cimport Function, Functional, InterpolateFunction
 from .FirstOrderLinear cimport dirichlet_first_order_solver_arrays
 
 

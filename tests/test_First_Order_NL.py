@@ -1,12 +1,17 @@
+import math as m
 import numpy as np
 
 from BDMesh import Mesh1DUniform
+from BDFunction1D import Function
+from BDFunction1D.Functional import Functional
+from BDFunction1D.Interpolation import InterpolateFunction
+from BDFunction1D.Differentiation import NumericGradient
+
 from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_arrays
 from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver
 from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_mesh_arrays
 from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_mesh
 from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_solver_recurrent_mesh
-from BDPoisson1D.Function import Function, Functional, NumericGradient, InterpolateFunction
 
 import unittest
 
@@ -16,9 +21,8 @@ class TestFunction(Function):
     Some known differentiable function
     """
 
-    def evaluate(self, x):
-        xx = np.asarray(x)
-        return np.sin(xx) ** 2
+    def evaluate_point(self, x):
+        return m.sin(x) ** 2
 
 
 class TestFunctional(Functional):
@@ -26,15 +30,12 @@ class TestFunctional(Functional):
     f(x, y), RHS of the ODE
     """
 
-    def evaluate(self, x):
-        xx = np.asarray(x)
-        yy = np.asarray(self.f.evaluate(x))
-        result = np.empty_like(yy)
-        idc = np.where(yy >= 0.5)
-        ids = np.where(yy < 0.5)
-        result[ids] = 2 * np.sign(np.cos(xx[ids])) * np.sin(xx[ids]) * np.sqrt(1 - yy[ids])
-        result[idc] = 2 * np.sign(np.sin(xx[idc])) * np.cos(xx[idc]) * np.sqrt(yy[idc])
-        return result
+    def evaluate_point(self, x):
+        y = self.f.evaluate_point(x)
+        if y >= 0.5:
+            return 2 * np.sign(m.sin(x)) * m.cos(x) * m.sqrt(y)
+        else:
+            return 2 * np.sign(m.cos(x)) * m.sin(x) * m.sqrt(1 - y)
 
 
 class TestFunctionalDf(Functional):
@@ -42,15 +43,12 @@ class TestFunctionalDf(Functional):
     df/dy(x, y)
     """
 
-    def evaluate(self, x):
-        xx = np.asarray(x)
-        yy = np.asarray(self.f.evaluate(x))
-        result = np.empty_like(yy)
-        idc = np.where(yy >= 0.5)
-        ids = np.where(yy < 0.5)
-        result[ids] = -np.sign(np.cos(xx[ids])) * np.sin(xx[ids]) / np.sqrt(1 - yy[ids])
-        result[idc] = np.sign(np.sin(xx[idc])) * np.cos(xx[idc]) / np.sqrt(yy[idc])
-        return result
+    def evaluate_point(self, x):
+        y = self.f.evaluate_point(x)
+        if y >= 0.5:
+            return np.sign(m.sin(x)) * m.cos(x) / m.sqrt(y)
+        else:
+            return -np.sign(m.cos(x)) * m.sin(x) / m.sqrt(1 - y)
 
 
 class MixFunction(Function):
@@ -58,8 +56,8 @@ class MixFunction(Function):
     Some known differentiable function
     """
 
-    def evaluate(self, x):
-        return np.zeros(x.shape[0], dtype=np.double)
+    def evaluate_point(self, x):
+        return 0.0
 
 
 class GuessFunction(Function):
@@ -67,8 +65,8 @@ class GuessFunction(Function):
     Some known differentiable function
     """
 
-    def evaluate(self, x):
-        return np.zeros(x.shape[0], dtype=np.double)
+    def evaluate_point(self, x):
+        return 0.0
 
 
 class TestDirichletFirstOrderNL(unittest.TestCase):
@@ -82,8 +80,8 @@ class TestDirichletFirstOrderNL(unittest.TestCase):
         shift = np.pi * 11 + 1
         start = -3 * np.pi / 2 + shift
         stop = 3 * np.pi / 2 + shift + 0.5
-        bc1 = self.y0.evaluate([start])[0]
-        bc2 = self.y0.evaluate([stop])[0]
+        bc1 = self.y0.evaluate_point(start)
+        bc2 = self.y0.evaluate_point(stop)
 
         y = GuessFunction()
         p = MixFunction()
@@ -135,8 +133,8 @@ class TestDirichletFirstOrderNL(unittest.TestCase):
         shift = np.pi * 11 + 1
         start = -3 * np.pi / 2 + shift
         stop = 3 * np.pi / 2 + shift + 0.5
-        bc1 = self.y0.evaluate([start])[0]
-        bc2 = self.y0.evaluate([stop])[0]
+        bc1 = self.y0.evaluate_point(start)
+        bc2 = self.y0.evaluate_point(stop)
 
         y = GuessFunction()
         p = MixFunction()
@@ -176,8 +174,8 @@ class TestDirichletFirstOrderNL(unittest.TestCase):
         shift = np.pi * 11 + 1
         start = -3 * np.pi / 2 + shift
         stop = 3 * np.pi / 2 + shift + 0.5
-        bc1 = self.y0.evaluate([start])[0]
-        bc2 = self.y0.evaluate([stop])[0]
+        bc1 = self.y0.evaluate_point(start)
+        bc2 = self.y0.evaluate_point(stop)
 
         y = GuessFunction()
         p = MixFunction()
@@ -228,8 +226,8 @@ class TestDirichletFirstOrderNL(unittest.TestCase):
         shift = np.pi * 11 + 1
         start = -3 * np.pi / 2 + shift
         stop = 3 * np.pi / 2 + shift + 0.5
-        bc1 = self.y0.evaluate([start])[0]
-        bc2 = self.y0.evaluate([stop])[0]
+        bc1 = self.y0.evaluate_point(start)
+        bc2 = self.y0.evaluate_point(stop)
 
         y = GuessFunction()
         p = MixFunction()
@@ -269,8 +267,8 @@ class TestDirichletFirstOrderNL(unittest.TestCase):
         shift = np.pi * 11 + 1
         start = -3 * np.pi / 2 + shift
         stop = 3 * np.pi / 2 + shift + 0.5
-        bc1 = self.y0.evaluate([start])[0]
-        bc2 = self.y0.evaluate([stop])[0]
+        bc1 = self.y0.evaluate_point(start)
+        bc2 = self.y0.evaluate_point(stop)
 
         y = GuessFunction()
         p = MixFunction()

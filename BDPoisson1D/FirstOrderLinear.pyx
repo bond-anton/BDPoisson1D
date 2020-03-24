@@ -1,13 +1,10 @@
-import numpy as np
-
 from cython cimport boundscheck, wraparound
 from cpython.array cimport array, clone
 
 from scipy.linalg.cython_lapack cimport dgtsv
 
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
-from ._helpers cimport gradient1d
-from .Function cimport Function
+from BDFunction1D cimport Function
 
 
 @boundscheck(False)

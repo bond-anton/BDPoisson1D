@@ -1,6 +1,8 @@
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 from BDMesh.TreeMesh1DUniform cimport TreeMesh1DUniform
-from .Function cimport Function, Functional
+from BDFunction1D cimport Function
+from BDFunction1D.Functional cimport Functional
+
 
 cpdef double[:, :] dirichlet_non_linear_poisson_solver_arrays(double[:] nodes, double[:] y0_nodes,
                                                               double[:] f_nodes, double[:] df_ddy_nodes,

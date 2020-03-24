@@ -7,8 +7,10 @@ from scipy.linalg.cython_lapack cimport dgtsv
 
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 from BDMesh.TreeMesh1DUniform cimport  TreeMesh1DUniform
+from BDFunction1D cimport Function
+from BDFunction1D.Functional cimport Functional
+from BDFunction1D.Interpolation cimport InterpolateFunction
 from ._helpers cimport gradient1d, refinement_points
-from .Function cimport Function, Functional, InterpolateFunction
 
 
 @boundscheck(False)

@@ -1,17 +1,20 @@
+import math as m
 import numpy as np
 
 from BDMesh import Mesh1DUniform
+from BDFunction1D import Function
+from BDFunction1D.Differentiation import NumericGradient
 from BDPoisson1D.DirichletLinear import dirichlet_poisson_solver_arrays, dirichlet_poisson_solver
 from BDPoisson1D.DirichletLinear import dirichlet_poisson_solver_mesh_arrays, dirichlet_poisson_solver_mesh
 from BDPoisson1D.DirichletLinear import dirichlet_poisson_solver_amr
-from BDPoisson1D.Function import Function, NumericGradient
+
 
 import unittest
 
 
 class TestFunction(Function):
-    def evaluate(self, x):
-        return -10 * np.sin(np.pi * np.array(x) ** 2) / (2 * np.pi) + 3 * np.array(x) ** 2 + np.array(x) + 5
+    def evaluate_point(self, x):
+        return -10 * m.sin(m.pi * x ** 2) / (2 * m.pi) + 3 * x ** 2 + x + 5
 
 
 class TestDirichlet(unittest.TestCase):
@@ -26,8 +29,8 @@ class TestDirichlet(unittest.TestCase):
         stop = 2.0
 
         nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
-        bc1 = self.y.evaluate([start])[0]  # left Dirichlet boundary condition
-        bc2 = self.y.evaluate([stop])[0]  # right Dirichlet boundary condition
+        bc1 = self.y.evaluate_point(start)  # left Dirichlet boundary condition
+        bc2 = self.y.evaluate_point(stop)  # right Dirichlet boundary condition
 
         result_1 = np.asarray(dirichlet_poisson_solver_arrays(nodes, self.d2y_numeric.evaluate(nodes), bc1, bc2, j=1))
         nodes = np.linspace(start, stop, num=101, endpoint=True)
@@ -39,8 +42,8 @@ class TestDirichlet(unittest.TestCase):
         stop = 2.0
 
         nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
-        bc1 = self.y.evaluate([start])[0]  # left Dirichlet boundary condition
-        bc2 = self.y.evaluate([stop])[0]  # right Dirichlet boundary condition
+        bc1 = self.y.evaluate_point(start)  # left Dirichlet boundary condition
+        bc2 = self.y.evaluate_point(stop)  # right Dirichlet boundary condition
 
         result_1 = np.asarray(dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0))
         nodes = np.linspace(start, stop, num=101, endpoint=True)
@@ -51,25 +54,25 @@ class TestDirichlet(unittest.TestCase):
         start = -1.0
         stop = 2.0
         mesh_1 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
+                               boundary_condition_1=self.y.evaluate_point(start),
+                               boundary_condition_2=self.y.evaluate_point(stop),
                                physical_step=0.02)
         dirichlet_poisson_solver_mesh_arrays(mesh_1, self.d2y_numeric.evaluate(mesh_1.physical_nodes))
         mesh_2 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
+                               boundary_condition_1=self.y.evaluate_point(start),
+                               boundary_condition_2=self.y.evaluate_point(stop),
                                physical_step=0.01)
         dirichlet_poisson_solver_mesh_arrays(mesh_2, self.d2y_numeric.evaluate(mesh_2.physical_nodes))
         self.assertTrue(np.mean(np.asarray(mesh_2.residual)) < np.mean(np.asarray(mesh_1.residual)))
 
         mesh_1 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
+                               boundary_condition_1=self.y.evaluate_point(start),
+                               boundary_condition_2=self.y.evaluate_point(stop),
                                physical_step=0.02)
         dirichlet_poisson_solver_mesh(mesh_1, self.d2y_numeric)
         mesh_2 = Mesh1DUniform(start, stop,
-                               boundary_condition_1=self.y.evaluate([start])[0],
-                               boundary_condition_2=self.y.evaluate([stop])[0],
+                               boundary_condition_1=self.y.evaluate_point(start),
+                               boundary_condition_2=self.y.evaluate_point(stop),
                                physical_step=0.01)
         dirichlet_poisson_solver_mesh(mesh_2, self.d2y_numeric)
         self.assertTrue(np.mean(np.asarray(mesh_2.residual)) < np.mean(np.asarray(mesh_1.residual)))
@@ -81,7 +84,7 @@ class TestDirichlet(unittest.TestCase):
         threshold = 1e-2
         max_level = 15
         meshes = dirichlet_poisson_solver_amr(start, stop, step, self.d2y_numeric,
-                                              self.y.evaluate([start])[0], self.y.evaluate([stop])[0],
+                                              self.y.evaluate_point(start), self.y.evaluate_point(stop),
                                               threshold, max_level=max_level)
         flat_mesh = meshes.flatten()
         if len(meshes.levels) < max_level:

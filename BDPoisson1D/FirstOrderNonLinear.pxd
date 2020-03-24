@@ -1,5 +1,6 @@
-from .Function cimport Function, Functional
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
+from BDFunction1D cimport Function
+from BDFunction1D.Functional cimport Functional
 
 
 cpdef double[:, :] dirichlet_non_linear_first_order_solver_arrays(double[:] nodes, double[:] y0_nodes,
