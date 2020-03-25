@@ -1,16 +1,19 @@
+import math as m
 import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_non_linear_poisson_solver
-from BDPoisson1D import Function, Functional, InterpolateFunction
+from BDFunction1D import Function
+from BDFunction1D.Functional import Functional
+from BDFunction1D.Interpolation import InterpolateFunction
 
 
 class TestFunction(Function):
     """
     Some known differentiable function
     """
-    def evaluate(self, x):
-        return np.exp(-np.asarray(x) * 3)
+    def evaluate_point(self, x):
+        return m.exp(-x * 3)
 
 
 class TestFunctional(Functional):
@@ -19,8 +22,8 @@ class TestFunctional(Functional):
         self.Nd = Nd
         self.kT = kT
 
-    def evaluate(self, x):
-        return self.Nd(np.asarray(x)) * (1 - (np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)))
+    def evaluate_point(self, x):
+        return self.Nd(x) * (1 - (m.exp(-self.f.evaluate_point(x) / self.kT)))
 
 
 class TestFunctionalDf(Functional):
@@ -29,8 +32,8 @@ class TestFunctionalDf(Functional):
         self.Nd = Nd
         self.kT = kT
 
-    def evaluate(self, x):
-        return self.Nd(np.asarray(x)) / self.kT * np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)
+    def evaluate_point(self, x):
+        return self.Nd(x) / self.kT * m.exp(-self.f.evaluate_point(x) / self.kT)
 
 
 Nd = lambda x: np.ones_like(x)
@@ -57,7 +60,7 @@ Psi_line, = ax1.plot(nodes, Psi.evaluate(nodes))
 DPsi_line, = ax2.plot(nodes, DPsi)
 f_line, = ax3.plot(nodes, f.evaluate(nodes))
 E_line, = ax4.plot(nodes, E)
-print(Psi.evaluate(nodes), Psi.evaluate(nodes).size, Psi.evaluate(nodes).dtype)
+print(Psi.evaluate(nodes), Psi.evaluate(nodes).size, np.asarray(Psi.evaluate(nodes)).dtype)
 
 dPsi = np.gradient(Psi.evaluate(nodes), nodes, edge_order=2)
 print(dPsi, dPsi.size)

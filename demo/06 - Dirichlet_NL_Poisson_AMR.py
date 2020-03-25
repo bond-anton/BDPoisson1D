@@ -1,17 +1,19 @@
+import math as m
 import numpy as np
 
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_non_linear_poisson_solver_amr
-from BDPoisson1D import Function, Functional
+from BDFunction1D import Function
+from BDFunction1D.Functional import Functional
 
 
 class TestFunction(Function):
     """
     Some known differentiable function
     """
-    def evaluate(self, x):
-        return np.exp(-np.asarray(x) * 3)
+    def evaluate_point(self, x):
+        return m.exp(-x * 3)
 
 
 class TestFunctional(Functional):
@@ -20,8 +22,8 @@ class TestFunctional(Functional):
         self.Nd = Nd
         self.kT = kT
 
-    def evaluate(self, x):
-        return self.Nd(np.asarray(x)) * (1 - (np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)))
+    def evaluate_point(self, x):
+        return self.Nd(x) * (1 - (m.exp(-self.f.evaluate_point(x) / self.kT)))
 
 
 class TestFunctionalDf(Functional):
@@ -30,8 +32,8 @@ class TestFunctionalDf(Functional):
         self.Nd = Nd
         self.kT = kT
 
-    def evaluate(self, x):
-        return self.Nd(np.asarray(x)) / self.kT * np.exp(-np.asarray(self.f.evaluate(x)) / self.kT)
+    def evaluate_point(self, x):
+        return self.Nd(x) / self.kT * m.exp(-self.f.evaluate_point(x) / self.kT)
 
 
 Nd = lambda x: np.ones_like(x)

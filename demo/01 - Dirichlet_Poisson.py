@@ -1,16 +1,18 @@
+import math as m
 import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_poisson_solver
-from BDPoisson1D import Function, NumericGradient
+from BDFunction1D import Function
+from BDFunction1D.Differentiation import NumericGradient
 
 
 class TestFunction(Function):
     """
     Some known differentiable function
     """
-    def evaluate(self, x):
-        return -10 * np.sin(np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
+    def evaluate_point(self, x):
+        return -10 * m.sin(m.pi * x**2) / (2 * m.pi) + 3 * x**2 + x + 5
 
 y = TestFunction()
 dy_numeric = NumericGradient(y)
@@ -22,8 +24,8 @@ start = -1.0
 stop = 2.0
 
 nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
-bc1 = y.evaluate(np.array([start]))[0]  # left Dirichlet boundary condition
-bc2 = y.evaluate(np.array([stop]))[0]  # right Dirichlet boundary condition
+bc1 = y.evaluate_point(start)  # left Dirichlet boundary condition
+bc2 = y.evaluate_point(stop)  # right Dirichlet boundary condition
 
 result = dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1.0)  # solve Poisson equation
 

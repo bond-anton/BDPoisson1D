@@ -1,17 +1,19 @@
+import math as m
 import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_poisson_solver_mesh
-from BDPoisson1D import Function, NumericGradient
 from BDMesh import Mesh1DUniform
+from BDFunction1D import Function
+from BDFunction1D.Differentiation import NumericGradient
 
 
 class TestFunction(Function):
     """
     Some known differentiable function
     """
-    def evaluate(self, x):
-        return -10 * np.sin(np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
+    def evaluate_point(self, x):
+        return -10 * m.sin(m.pi * x**2) / (2 * m.pi) + 3 * x**2 + x + 5
 
 
 y = TestFunction()
@@ -23,8 +25,8 @@ f = NumericGradient(dy_numeric)
 start = -1.0
 stop = 2.0
 mesh = Mesh1DUniform(start, stop,
-                     boundary_condition_1=y.evaluate(np.array([start])),
-                     boundary_condition_2=y.evaluate(np.array([stop])),
+                     boundary_condition_1=y.evaluate_point(start),
+                     boundary_condition_2=y.evaluate_point(stop),
                      physical_step=0.02)
 
 dirichlet_poisson_solver_mesh(mesh, f)  # solve Poisson equation

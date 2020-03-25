@@ -1,16 +1,18 @@
+import math as m
 import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import neumann_poisson_solver, neumann_poisson_solver_amr
-from BDPoisson1D import Function, NumericGradient
+from BDFunction1D import Function
+from BDFunction1D.Differentiation import NumericGradient
 
 
 class TestFunction(Function):
     """
     Some known differentiable function
     """
-    def evaluate(self, x):
-        return -10 * np.sin(np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
+    def evaluate_point(self, x):
+        return -10 * m.sin(m.pi * x**2) / (2 * m.pi) + 3 * x**2 + x + 5
 
 
 y = TestFunction()
@@ -26,15 +28,15 @@ threshold = 1.0e-2
 max_level = 10
 nodes = np.linspace(start, stop, num=1001, endpoint=True)
 print('STEP:', nodes[1] - nodes[0])
-bc1 = dy_numeric.evaluate(nodes)[0]
-bc2 = dy_numeric.evaluate(nodes)[-1]
+bc1 = dy_numeric.evaluate_point(start)
+bc2 = dy_numeric.evaluate_point(stop)
 integral = np.trapz(f.evaluate(nodes), nodes)
 print(integral, bc2 - bc1)
 print(np.allclose(integral, bc2 - bc1))
 print('Y0:', y.evaluate(np.asarray([start]))[0])
 
 meshes = neumann_poisson_solver_amr(start, stop, step, f, bc1, bc2,
-                                    y.evaluate(np.asarray([start]))[0],
+                                    y.evaluate_point(start),
                                     25,
                                     threshold, max_level=max_level)
 

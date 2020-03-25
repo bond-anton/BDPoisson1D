@@ -1,16 +1,18 @@
+import math as m
 import numpy as np
 from matplotlib import pyplot as plt
 
 from BDPoisson1D import dirichlet_poisson_solver_amr
-from BDPoisson1D import Function, NumericGradient
+from BDFunction1D import Function
+from BDFunction1D.Differentiation import NumericGradient
 
 
 class TestFunction(Function):
     """
     Some known differentiable function
     """
-    def evaluate(self, x):
-        return -10 * np.sin(np.pi * np.asarray(x)**2) / (2 * np.pi) + 3 * np.asarray(x) ** 2 + np.asarray(x) + 5
+    def evaluate_point(self, x):
+        return -10 * m.sin(m.pi * x**2) / (2 * m.pi) + 3 * x**2 + x + 5
 
 
 y = TestFunction()
@@ -40,8 +42,8 @@ start = 0.2
 stop = 1.2
 step = 0.02
 meshes = dirichlet_poisson_solver_amr(start, stop, step, f,
-                                      y.evaluate(np.array([start]))[0],
-                                      y.evaluate(np.array([stop]))[0],
+                                      y.evaluate_point(start),
+                                      y.evaluate_point(stop),
                                       max_iter=100,
                                       threshold=1.0e-4, max_level=15)
 flat_mesh = meshes.flatten()
