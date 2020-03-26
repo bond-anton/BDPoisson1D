@@ -76,11 +76,11 @@ class TestDirichletFirstOrder(unittest.TestCase):
         bc2 = self.y.evaluate_point(stop)  # right Dirichlet boundary condition
 
         result_1 = np.asarray(dirichlet_first_order_solver(nodes, self.p, self.f,
-                                                           bc1, bc2, j=1))
+                                                           bc1, bc2, j=1).evaluate(nodes))
         err1 = np.abs(np.square(result_1 - self.y.evaluate(nodes)).mean())
         nodes = np.linspace(start, stop, num=501, endpoint=True)
         result_2 = np.asarray(dirichlet_first_order_solver(nodes, self.p, self.f,
-                                                           bc1, bc2, j=1))
+                                                           bc1, bc2, j=1).evaluate(nodes))
         err2 = np.abs(np.square(result_2 - self.y.evaluate(nodes)).mean())
         self.assertTrue(err1 > err2)
 
@@ -108,12 +108,14 @@ class TestDirichletFirstOrder(unittest.TestCase):
                                boundary_condition_1=self.y.evaluate_point(start),
                                boundary_condition_2=self.y.evaluate_point(stop),
                                physical_step=0.02)
-        dirichlet_first_order_solver_mesh(mesh_1, self.p, self.f)
+        result_1 = np.asarray(dirichlet_first_order_solver_mesh(mesh_1, self.p, self.f).evaluate(mesh_1.physical_nodes))
+        np.testing.assert_allclose(result_1, mesh_1.solution)
         err1 = np.abs(np.square(mesh_1.solution - np.asarray(self.y.evaluate(mesh_1.physical_nodes))).mean())
         mesh_2 = Mesh1DUniform(start, stop,
                                boundary_condition_1=self.y.evaluate_point(start),
                                boundary_condition_2=self.y.evaluate_point(stop),
                                physical_step=0.01)
-        dirichlet_first_order_solver_mesh(mesh_2, self.p, self.f)
+        result_2 = np.asarray(dirichlet_first_order_solver_mesh(mesh_2, self.p, self.f).evaluate(mesh_2.physical_nodes))
+        np.testing.assert_allclose(result_2, mesh_2.solution)
         err2 = np.abs(np.square(mesh_2.solution - np.asarray(self.y.evaluate(mesh_2.physical_nodes))).mean())
         self.assertTrue(err1 > err2)

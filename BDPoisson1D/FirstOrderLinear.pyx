@@ -5,6 +5,7 @@ from scipy.linalg.cython_lapack cimport dgtsv
 
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 from BDFunction1D cimport Function
+from BDFunction1D.Interpolation cimport InterpolateFunction, InterpolateFunctionMesh
 
 
 @boundscheck(False)
@@ -55,7 +56,7 @@ cpdef double[:] dirichlet_first_order_solver_arrays(double[:] nodes, double[:] p
 
 @boundscheck(False)
 @wraparound(False)
-cpdef double[:] dirichlet_first_order_solver(double[:] nodes, Function p, Function f,
+cpdef Function dirichlet_first_order_solver(double[:] nodes, Function p, Function f,
                                              double bc1, double bc2, double j=1.0):
     """
     Solves linear 1D differential equation of the form
@@ -70,10 +71,15 @@ cpdef double[:] dirichlet_first_order_solver(double[:] nodes, Function p, Functi
     :param bc2: boundary condition at nodes[n] point (a number).
     :param j: Jacobian.
     :return:
-        y: 1D array of solution function y(x) values on nodes array.
-        residual: error of the solution.
+        y: Interpolation Function y(x) on array of solution values on nodes array.
     """
-    return dirichlet_first_order_solver_arrays(nodes, p.evaluate(nodes), f.evaluate(nodes), bc1, bc2, j)
+    cdef:
+        int i, n = nodes.shape[0]
+        double[:] y, phys_nodes = clone(array('d'), n, zero=False)
+    y = dirichlet_first_order_solver_arrays(nodes, p.evaluate(nodes), f.evaluate(nodes), bc1, bc2, j)
+    for i in range(n):
+        phys_nodes[i] = j * nodes[i]
+    return InterpolateFunction(phys_nodes, y, clone(array('d'), n, zero=True))
 
 
 @boundscheck(False)
@@ -96,7 +102,7 @@ cpdef void dirichlet_first_order_solver_mesh_arrays(Mesh1DUniform mesh, double[:
 
 @boundscheck(False)
 @wraparound(False)
-cpdef void dirichlet_first_order_solver_mesh(Mesh1DUniform mesh, Function p, Function f):
+cpdef Function dirichlet_first_order_solver_mesh(Mesh1DUniform mesh, Function p, Function f):
     """
     Solves linear 1D differential equation of the form
         dy/dx + p(x)*y = f(x)
@@ -108,3 +114,4 @@ cpdef void dirichlet_first_order_solver_mesh(Mesh1DUniform mesh, Function p, Fun
     :param f: function f(x) callable on nodes array.
     """
     dirichlet_first_order_solver_mesh_arrays(mesh, p.evaluate(mesh.physical_nodes), f.evaluate(mesh.physical_nodes))
+    return InterpolateFunctionMesh(mesh)

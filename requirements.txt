@@ -2,5 +2,5 @@ numpy
 scipy>=0.17.0
 Cython
 BDMesh>=0.2.11
-BDFunction1D>=0.0.2
+BDFunction1D>=0.0.4
 matplotlib

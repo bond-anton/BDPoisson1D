@@ -139,8 +139,8 @@ setup(
                                   'DirichletLinear.pxd', 'DirichletNonLinear.pxd',
                                   'NeumannLinear.pxd',
                                   'Function.pxd', '_helpers.pxd']},
-    setup_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'BDMesh>=0.2.11', 'BDFunction1D>=0.0.2'],
-    install_requires=['numpy', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.11', 'BDFunction1D>=0.0.2'],
+    setup_requires=['numpy', 'Cython', 'scipy>=0.17.0', 'BDMesh>=0.2.11', 'BDFunction1D>=0.0.4'],
+    install_requires=['numpy', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.11', 'BDFunction1D>=0.0.4'],
     test_suite='nose.collector',
     cmdclass={'build_ext': CustomBuildExt},
     tests_require=['nose']
