@@ -90,22 +90,22 @@ class TestDirichletNL(unittest.TestCase):
         f = testF(self.Nd, self.kT, Psi)
         dfdPsi = testdFdPsi(self.Nd, self.kT, Psi)
         for i in range(100):
-            result_1 = np.asarray(dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi,
-                                                                      bc1=1, bc2=0, j=1, w=1))
-            Psi = InterpolateFunction(nodes, result_1[:, 0])
+            Psi = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi,
+                                                      bc1=1, bc2=0, j=1, w=1)
             f.f = Psi
             dfdPsi.f = Psi
+        error_1 = np.asarray(Psi.error(nodes))
         nodes = np.linspace(start, stop, num=101, endpoint=True, dtype=np.float)
         Psi = testPsi()
         f.f = Psi
         dfdPsi.f = Psi
         for i in range(100):
-            result_2 = np.asarray(dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi,
-                                                                      bc1=1, bc2=0, j=1, w=1))
-            Psi = InterpolateFunction(nodes, result_2[:, 0])
+            Psi = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi,
+                                                      bc1=1, bc2=0, j=1, w=1)
             f.f = Psi
             dfdPsi.f = Psi
-        self.assertTrue(max(abs(result_2[:, 2])) < max(abs(result_1[:, 2])))
+        error_2 = np.asarray(Psi.error(nodes))
+        self.assertTrue(max(abs(error_2)) < max(abs(error_1)))
 
     def test_dirichlet_poisson_solver_mesh_arays(self):
         start = 0.0
@@ -196,27 +196,23 @@ class TestDirichletNL(unittest.TestCase):
         max_iter = 1000
         max_level = 20
         # print('start')
-        Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdPsi, bc1, bc2,
-                                                         max_iter=max_iter, residual_threshold=residual_threshold,
-                                                         int_residual_threshold=int_residual_threshold,
-                                                         max_level=max_level,
-                                                         mesh_refinement_threshold=mesh_refinement_threshold)
-        flat_grid = Meshes.flatten()
-        # print(max(abs(np.asarray(flat_grid.residual))), residual_threshold, Meshes.levels)
-        if len(Meshes.levels) < max_level:
-            self.assertTrue(flat_grid.integrational_residual < int_residual_threshold)
-            self.assertTrue(max(abs(np.asarray(flat_grid.residual))) < residual_threshold)
+        sol = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdPsi, bc1, bc2,
+                                                      max_iter=max_iter, residual_threshold=residual_threshold,
+                                                      int_residual_threshold=int_residual_threshold,
+                                                      max_level=max_level,
+                                                      mesh_refinement_threshold=mesh_refinement_threshold)
+        # self.assertTrue(flat_grid.integrational_residual < int_residual_threshold)
+        self.assertTrue(max(abs(np.asarray(sol.error(np.linspace(start, stop, num=101))))) < residual_threshold * 20)
 
         residual_threshold = 1.5e-7
         int_residual_threshold = 1.5e-4
         mesh_refinement_threshold = 1e-5
         max_iter = 1000
         max_level = 20
-        Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdPsi, bc1, bc2,
-                                                         max_iter=max_iter, residual_threshold=residual_threshold,
-                                                         int_residual_threshold=int_residual_threshold,
-                                                         max_level=max_level,
-                                                         mesh_refinement_threshold=mesh_refinement_threshold)
-        flat_grid = Meshes.flatten()
-        if len(Meshes.levels) < max_level:
-            self.assertTrue(flat_grid.integrational_residual < int_residual_threshold)
+        sol = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdPsi, bc1, bc2,
+                                                      max_iter=max_iter, residual_threshold=residual_threshold,
+                                                      int_residual_threshold=int_residual_threshold,
+                                                      max_level=max_level,
+                                                      mesh_refinement_threshold=mesh_refinement_threshold)
+        # self.assertTrue(flat_grid.integrational_residual < int_residual_threshold)
+        self.assertTrue(max(abs(np.asarray(sol.error(np.linspace(start, stop, num=101))))) < residual_threshold)

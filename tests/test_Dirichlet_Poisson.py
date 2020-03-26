@@ -45,10 +45,10 @@ class TestDirichlet(unittest.TestCase):
         bc1 = self.y.evaluate_point(start)  # left Dirichlet boundary condition
         bc2 = self.y.evaluate_point(stop)  # right Dirichlet boundary condition
 
-        result_1 = np.asarray(dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0))
+        result_1 = np.asarray(dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0).error(nodes))
         nodes = np.linspace(start, stop, num=101, endpoint=True)
-        result_2 = np.asarray(dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0))
-        self.assertTrue(np.mean(result_2[:, 1]) < np.mean(result_1[:, 1]))
+        result_2 = np.asarray(dirichlet_poisson_solver(nodes, self.d2y_numeric, bc1, bc2, j=1.0).error(nodes))
+        self.assertTrue(np.mean(result_2) < np.mean(result_1))
 
     def test_dirichlet_poisson_solver_mesh(self):
         start = -1.0
@@ -83,9 +83,7 @@ class TestDirichlet(unittest.TestCase):
         step = 0.01
         threshold = 1e-2
         max_level = 15
-        meshes = dirichlet_poisson_solver_amr(start, stop, step, self.d2y_numeric,
-                                              self.y.evaluate_point(start), self.y.evaluate_point(stop),
-                                              threshold, max_level=max_level)
-        flat_mesh = meshes.flatten()
-        if len(meshes.levels) < max_level:
-            self.assertTrue(max(abs(np.asarray(flat_mesh.residual))) < 1.0e-2)
+        y = dirichlet_poisson_solver_amr(start, stop, step, self.d2y_numeric,
+                                         self.y.evaluate_point(start), self.y.evaluate_point(stop),
+                                         threshold, max_level=max_level)
+        self.assertTrue(max(abs(np.asarray(y.error(np.linspace(start, stop, num=int((stop - start)/step)))))) < 1.0e-2)

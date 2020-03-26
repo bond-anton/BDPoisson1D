@@ -8,6 +8,7 @@ from scipy.linalg.cython_lapack cimport dgtsv
 from BDMesh.TreeMesh1DUniform cimport TreeMesh1DUniform
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 from BDFunction1D cimport Function
+from BDFunction1D.Interpolation cimport InterpolateFunction, InterpolateFunctionMesh
 from ._helpers cimport gradient1d, refinement_points
 
 
@@ -59,7 +60,7 @@ cpdef double[:, :] dirichlet_poisson_solver_arrays(double[:] nodes, double[:] f_
 
 @boundscheck(False)
 @wraparound(False)
-cpdef double[:, :] dirichlet_poisson_solver(double[:] nodes, Function f, double bc1, double bc2, double j=1.0):
+cpdef Function dirichlet_poisson_solver(double[:] nodes, Function f, double bc1, double bc2, double j=1.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -75,7 +76,14 @@ cpdef double[:, :] dirichlet_poisson_solver(double[:] nodes, Function f, double 
         y: 1D array of solution function y(x) values on nodes array.
         residual: error of the solution.
     """
-    return dirichlet_poisson_solver_arrays(nodes, f.evaluate(nodes), bc1, bc2, j)
+    cdef:
+        int i, n = nodes.shape[0]
+        double[:] phys_nodes = clone(array('d'), n, zero=False)
+        double[:, :] y
+    y = dirichlet_poisson_solver_arrays(nodes, f.evaluate(nodes), bc1, bc2, j)
+    for i in range(n):
+        phys_nodes[i] = j * nodes[i]
+    return InterpolateFunction(phys_nodes, y[:, 0], y[:, 1])
 
 
 @boundscheck(False)
@@ -101,7 +109,7 @@ cpdef void dirichlet_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_
 
 @boundscheck(False)
 @wraparound(False)
-cpdef void dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
+cpdef Function dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -112,13 +120,14 @@ cpdef void dirichlet_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
     :param f: function f(x) callable on nodes array.
     """
     dirichlet_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.physical_nodes))
+    return InterpolateFunctionMesh(mesh)
 
 
 @boundscheck(False)
 @wraparound(False)
-cpdef void dirichlet_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function f,
-                                             int max_iter=1000,
-                                             double threshold=1e-2, int max_level=10):
+cpdef Function dirichlet_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function f,
+                                                 int max_iter=1000,
+                                                 double threshold=1e-2, int max_level=10):
     """
     Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
     :param meshes_tree: mesh_tree to start with (only root mesh is needed).
@@ -157,14 +166,15 @@ cpdef void dirichlet_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Func
         meshes_tree.remove_coarse_duplicates()
         if converged == n or level == max_level:
             break
+    return InterpolateFunctionMesh(meshes_tree)
 
 
 @boundscheck(False)
 @wraparound(False)
-cpdef TreeMesh1DUniform dirichlet_poisson_solver_amr(double boundary_1, double boundary_2, double step, Function f,
-                                                     double bc1, double bc2,
-                                                     int max_iter=1000,
-                                                     double threshold=1e-2, int max_level=10):
+cpdef Function dirichlet_poisson_solver_amr(double boundary_1, double boundary_2, double step, Function f,
+                                            double bc1, double bc2,
+                                            int max_iter=1000,
+                                            double threshold=1e-2, int max_level=10):
     """
     Linear Poisson equation solver with Adaptive Mesh Refinement algorithm.
     :param boundary_1: physical nodes left boundary.
@@ -176,7 +186,7 @@ cpdef TreeMesh1DUniform dirichlet_poisson_solver_amr(double boundary_1, double b
     :param max_iter: maximal number of allowed iterations.
     :param threshold: algorithm convergence residual threshold value.
     :param max_level: max level of mesh refinement.
-    :return: meshes tree with solution and residual.
+    :return: InterpolateFunction on solution meshes tree.
     """
     cdef:
         Mesh1DUniform root_mesh, mesh
@@ -189,5 +199,4 @@ cpdef TreeMesh1DUniform dirichlet_poisson_solver_amr(double boundary_1, double b
                               boundary_condition_2=bc2,
                               physical_step=round(step, 9))
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-    dirichlet_poisson_solver_mesh_amr(meshes_tree, f, max_iter, threshold, max_level)
-    return meshes_tree
+    return dirichlet_poisson_solver_mesh_amr(meshes_tree, f, max_iter, threshold, max_level)

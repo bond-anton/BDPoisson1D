@@ -10,6 +10,7 @@ from libc.math cimport fabs
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 from BDMesh.TreeMesh1DUniform cimport TreeMesh1DUniform
 from BDFunction1D cimport Function
+from BDFunction1D.Interpolation cimport InterpolateFunction, InterpolateFunctionMesh
 
 from._helpers cimport trapz_1d, gradient1d, refinement_points
 
@@ -70,8 +71,8 @@ cpdef double[:, :] neumann_poisson_solver_arrays(double[:] nodes, double[:] f_no
 
 @boundscheck(False)
 @wraparound(True)
-cpdef double[:, :] neumann_poisson_solver(double[:] nodes, Function f,
-                                          double bc1, double bc2, double j=1.0, double y0=0.0):
+cpdef Function neumann_poisson_solver(double[:] nodes, Function f,
+                                      double bc1, double bc2, double j=1.0, double y0=0.0):
     """
     Solves 1D differential equation of the form
         d2y/dx2 = f(x)
@@ -88,7 +89,14 @@ cpdef double[:, :] neumann_poisson_solver(double[:] nodes, Function f,
         y: 1D array of solution function y(x) values on nodes array.
         residual: error of the solution.
     """
-    return neumann_poisson_solver_arrays(nodes, f.evaluate(nodes), bc1, bc2, j, y0)
+    cdef:
+        int i, n = nodes.shape[0]
+        double[:] phys_nodes = clone(array('d'), n, zero=False)
+        double[:, :] y
+    y = neumann_poisson_solver_arrays(nodes, f.evaluate(nodes), bc1, bc2, j, y0)
+    for i in range(n):
+        phys_nodes[i] = j * nodes[i]
+    return InterpolateFunction(phys_nodes, y[:, 0], y[:, 1])
 
 
 @boundscheck(False)
@@ -105,14 +113,15 @@ cpdef void neumann_poisson_solver_mesh_arrays(Mesh1DUniform mesh, double[:] f_no
 
 @boundscheck(False)
 @wraparound(True)
-cpdef void neumann_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
+cpdef Function neumann_poisson_solver_mesh(Mesh1DUniform mesh, Function f):
     neumann_poisson_solver_mesh_arrays(mesh, f.evaluate(mesh.physical_nodes))
+    return InterpolateFunctionMesh(mesh)
 
 
 @boundscheck(False)
 @wraparound(True)
-cpdef void neumann_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function f,
-                                           int max_iter=1000, double threshold=1.0e-2, int max_level=10):
+cpdef Function neumann_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Function f,
+                                               int max_iter=1000, double threshold=1.0e-2, int max_level=10):
     cdef:
         int level, i = 0, j, converged, n
         Mesh1DUniform mesh
@@ -148,13 +157,14 @@ cpdef void neumann_poisson_solver_mesh_amr(TreeMesh1DUniform meshes_tree, Functi
         meshes_tree.remove_coarse_duplicates()
         if converged == n or level == max_level:
             break
+    return InterpolateFunctionMesh(meshes_tree)
 
 
 @boundscheck(False)
 @wraparound(True)
-cpdef TreeMesh1DUniform neumann_poisson_solver_amr(double boundary_1, double boundary_2, double step, Function f,
-                                                   double bc1, double bc2, double y0=0.0,
-                                                   int max_iter=1000, double threshold=1.0e-2, int max_level=10):
+cpdef Function neumann_poisson_solver_amr(double boundary_1, double boundary_2, double step, Function f,
+                                          double bc1, double bc2, double y0=0.0,
+                                          int max_iter=1000, double threshold=1.0e-2, int max_level=10):
     cdef:
         Mesh1DUniform root_mesh, mesh
         TreeMesh1DUniform meshes_tree
@@ -167,5 +177,4 @@ cpdef TreeMesh1DUniform neumann_poisson_solver_amr(double boundary_1, double bou
                               physical_step=round(step, 9))
     root_mesh.__solution = np.ones(root_mesh.num, dtype=np.double) * y0
     meshes_tree = TreeMesh1DUniform(root_mesh, refinement_coefficient=2, aligned=True)
-    neumann_poisson_solver_mesh_amr(meshes_tree, f, max_iter, threshold, max_level)
-    return meshes_tree
+    return neumann_poisson_solver_mesh_amr(meshes_tree, f, max_iter, threshold, max_level)

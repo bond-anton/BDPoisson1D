@@ -143,17 +143,16 @@ class TestDirichletFirstOrderNL(unittest.TestCase):
         nodes = np.linspace(start, stop, num=1001, endpoint=True)  # generate nodes
         w = 1.0
         min_w = 0.3
-        mse_threshold = 1e-15
+        mse_threshold = 5e-15
         i = 0
         max_iterations = 100
         mse_old = 1e20
         while i < max_iterations:
-            result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=w)
-            y = InterpolateFunction(nodes, result[:, 0])
+            y = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=w)
             f.f = y
             df_dy.f = y
 
-            mse = np.sqrt(np.square(result[:, 1]).mean())
+            mse = np.sqrt(np.square(y.error(nodes)).mean())
             if mse > mse_old:
                 if w > min_w:
                     w -= 0.1
@@ -241,8 +240,7 @@ class TestDirichletFirstOrderNL(unittest.TestCase):
         max_iterations = 100
         mse_old = 1e20
         while i < max_iterations:
-            dirichlet_non_linear_first_order_solver_mesh(root_mesh, y, p, f, df_dy, w=w)
-            y = InterpolateFunction(root_mesh.physical_nodes, root_mesh.solution)
+            y = dirichlet_non_linear_first_order_solver_mesh(root_mesh, y, p, f, df_dy, w=w)
             f.f = y
             df_dy.f = y
 

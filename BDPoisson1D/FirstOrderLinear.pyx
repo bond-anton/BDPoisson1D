@@ -57,7 +57,7 @@ cpdef double[:] dirichlet_first_order_solver_arrays(double[:] nodes, double[:] p
 @boundscheck(False)
 @wraparound(False)
 cpdef Function dirichlet_first_order_solver(double[:] nodes, Function p, Function f,
-                                             double bc1, double bc2, double j=1.0):
+                                            double bc1, double bc2, double j=1.0):
     """
     Solves linear 1D differential equation of the form
         dy/dx + p(x)*y = f(x)

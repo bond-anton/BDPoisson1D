@@ -6,7 +6,7 @@ from cpython.array cimport array, clone
 from BDMesh.Mesh1DUniform cimport Mesh1DUniform
 from BDFunction1D cimport Function
 from BDFunction1D.Functional cimport Functional
-from BDFunction1D.Interpolation cimport InterpolateFunction
+from BDFunction1D.Interpolation cimport InterpolateFunction, InterpolateFunctionMesh
 from ._helpers cimport mean_square_root, gradient1d
 from .FirstOrderLinear cimport dirichlet_first_order_solver_arrays
 
@@ -62,9 +62,9 @@ cpdef double[:, :] dirichlet_non_linear_first_order_solver_arrays(double[:] node
 
 @boundscheck(False)
 @wraparound(False)
-cpdef double[:, :] dirichlet_non_linear_first_order_solver(double[:] nodes, Function y0, Function p,
-                                                           Functional f, Functional df_dy,
-                                                           double bc1, double bc2, double j=1.0, double w=1.0):
+cpdef Function dirichlet_non_linear_first_order_solver(double[:] nodes, Function y0, Function p,
+                                                       Functional f, Functional df_dy,
+                                                       double bc1, double bc2, double j=1.0, double w=1.0):
     """
     Solves nonlinear 1D differential equation of the form
         dy/dx + p(x)*y = f(x, y)
@@ -87,9 +87,16 @@ cpdef double[:, :] dirichlet_non_linear_first_order_solver(double[:] nodes, Func
     :return:
         result: solution y = y0 + w * Dy; Dy.
     """
-    return dirichlet_non_linear_first_order_solver_arrays(nodes, y0.evaluate(nodes), p.evaluate(nodes),
-                                                          f.evaluate(nodes), df_dy.evaluate(nodes),
-                                                          bc1, bc2, j, w)
+    cdef:
+        int i, n = nodes.shape[0]
+        double[:] phys_nodes = clone(array('d'), n, zero=False)
+        double[:, :] y
+    y = dirichlet_non_linear_first_order_solver_arrays(nodes, y0.evaluate(nodes), p.evaluate(nodes),
+                                                       f.evaluate(nodes), df_dy.evaluate(nodes),
+                                                       bc1, bc2, j, w)
+    for i in range(n):
+        phys_nodes[i] = j * nodes[i]
+    return InterpolateFunction(phys_nodes, y[:, 0], y[:, 1])
 
 
 @boundscheck(False)
@@ -126,9 +133,9 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh_arrays(Mesh1DUniform mes
 
 @boundscheck(False)
 @wraparound(False)
-cpdef void dirichlet_non_linear_first_order_solver_mesh(Mesh1DUniform mesh, Function y0, Function p,
-                                                        Functional f, Functional df_dy,
-                                                        double w=1.0):
+cpdef Function dirichlet_non_linear_first_order_solver_mesh(Mesh1DUniform mesh, Function y0, Function p,
+                                                            Functional f, Functional df_dy,
+                                                            double w=1.0):
     """
     Solves nonlinear 1D differential equation of the form
         dy/dx + p(x)*y = f(x, y)
@@ -150,13 +157,14 @@ cpdef void dirichlet_non_linear_first_order_solver_mesh(Mesh1DUniform mesh, Func
                                                         p.evaluate(mesh.physical_nodes),
                                                         f.evaluate(mesh.physical_nodes),
                                                         df_dy.evaluate(mesh.physical_nodes), w)
+    return InterpolateFunctionMesh(mesh)
 
 
 @boundscheck(False)
 @wraparound(False)
-cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform mesh, Function y0, Function p,
-                                                                  Functional f, Functional df_dy, double w=0.0,
-                                                                  int max_iter=1000, double threshold=1e-7):
+cpdef Function dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform mesh, Function y0, Function p,
+                                                                      Functional f, Functional df_dy, double w=0.0,
+                                                                      int max_iter=1000, double threshold=1e-7):
     """
     Solves nonlinear 1D differential equation of the form
         dy/dx + p(x)*y = f(x, y)
@@ -191,8 +199,7 @@ cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform 
         auto = False
     i = 0
     while i < max_iter:
-        dirichlet_non_linear_first_order_solver_mesh(mesh, y0, p, f, df_dy, w)
-        y0 = InterpolateFunction(mesh.to_physical_coordinate(mesh.__local_nodes), mesh.__solution)
+        y0 = dirichlet_non_linear_first_order_solver_mesh(mesh, y0, p, f, df_dy, w)
         f.__f = y0
         df_dy.__f = y0
         res = mean_square_root(mesh.residual)
@@ -207,3 +214,4 @@ cpdef void dirichlet_non_linear_first_order_solver_recurrent_mesh(Mesh1DUniform 
                     break
             res_old = res
         i += 1
+    return y0
