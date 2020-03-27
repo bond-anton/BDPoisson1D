@@ -7,7 +7,6 @@ from BDPoisson1D.FirstOrderNonLinear import dirichlet_non_linear_first_order_sol
 from BDFunction1D import Function
 from BDFunction1D.Functional import Functional
 from BDFunction1D.Differentiation import NumericGradient
-from BDFunction1D.Interpolation import InterpolateFunction
 
 
 class TestFunction(Function):
@@ -87,8 +86,9 @@ for i in range(1, 200):
     # result = dirichlet_non_linear_first_order_solver_arrays(nodes, y_nodes, p_nodes,
     #                                                         f_nodes, df_dy_nodes,
     #                                                         bc1, bc2, j=1.0, w=w)
-    result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=w)
-    mse = np.sqrt(np.square(result[:, 1]).mean())
+    solution = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=w)
+    # mse = np.sqrt(np.square(result[:, 1]).mean())
+    mse = np.sqrt(np.square(np.asarray(solution.error(nodes))).mean())
     hundreds.append(i)
     errs.append(mse)
     print(101 + i * 100, 'Mean Square ERR:', errs[-1])
@@ -129,9 +129,7 @@ while i < max_iterations:
     # result = dirichlet_non_linear_first_order_solver_arrays(nodes, y_nodes, p_nodes,
     #                                                         f_nodes, df_dy_nodes,
     #                                                         bc1, bc2, j=1.0, w=w)
-    result = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=w)
-
-    y = InterpolateFunction(nodes, result[:, 0])
+    y = dirichlet_non_linear_first_order_solver(nodes, y, p, f, df_dy, bc1, bc2, j=1.0, w=w)
 
     f.f = y
     df_dy.f = y
@@ -141,7 +139,7 @@ while i < max_iterations:
     f_nodes = f.evaluate(nodes)
     df_dy_nodes = df_dy.evaluate(nodes)
 
-    mse = np.sqrt(np.square(result[:, 1]).mean())
+    mse = np.sqrt(np.square(np.asarray(y.error(nodes))).mean())
     if mse > mse_old:
         if w > min_w:
             w -= 0.1
@@ -157,29 +155,29 @@ while i < max_iterations:
     i += 1
 print('Reached MSE:', mse, 'in', i, 'iterations.')
 
-dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
+dy_solution = NumericGradient(y)
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 ax1.plot(nodes, f.evaluate(nodes), 'r-', label='f(x)')
-ax1.plot(nodes, dy_solution + np.asarray(result[:, 0]) * np.asarray(p.evaluate(nodes)),
+ax1.plot(nodes, dy_solution.evaluate(nodes) + np.asarray(y.evaluate(nodes)) * np.asarray(p.evaluate(nodes)),
          'b-', label='dy/dx + p(x)*y (solution)')
 ax1.legend()
 
 ax2.plot(nodes, dy0_numeric.evaluate(nodes), 'r-', label='dy/dx')
-ax2.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
+ax2.plot(nodes, dy_solution.evaluate(nodes), 'b-', label='dy/dx (solution)')
 ax2.legend()
 
 ax3.plot(nodes, y0.evaluate(nodes), 'r-', label='y(x)')
-ax3.plot(nodes, result[:, 0], 'b-', label='solution')
+ax3.plot(nodes, y.evaluate(nodes), 'b-', label='solution')
 ax3.legend()
 
-ax4.plot(nodes, result[:, 1], 'g-o', label='residual')
+ax4.plot(nodes, y.error(nodes), 'g-o', label='residual')
 ax4.legend()
 plt.show()
 
 print('Compare to analytic solution')
-print('MSE:', np.square(np.asarray(result[:, 0]) - np.asarray(y.evaluate(nodes[:]))).mean())
+print('MSE:', np.square(np.asarray(y.evaluate(nodes)) - np.asarray(y0.evaluate(nodes[:]))).mean())
 
 fig, ax = plt.subplots()
-ax.plot(nodes, np.asarray(result[:, 0]) - np.asarray(y.evaluate(nodes[:])), 'g-o', label='residual')
+ax.plot(nodes, np.asarray(y.evaluate(nodes)) - np.asarray(y0.evaluate(nodes[:])), 'g-o', label='residual')
 plt.show()

@@ -27,25 +27,25 @@ nodes = np.linspace(start, stop, num=51, endpoint=True)  # generate nodes
 bc1 = y.evaluate_point(start)  # left Dirichlet boundary condition
 bc2 = y.evaluate_point(stop)  # right Dirichlet boundary condition
 
-result = dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1.0)  # solve Poisson equation
+solution = dirichlet_poisson_solver(nodes, f, bc1, bc2, j=1.0)  # solve Poisson equation
 
-dy_solution = np.gradient(result[:, 0], nodes, edge_order=2)
-d2y_solution = np.gradient(dy_solution, nodes, edge_order=2)
+dy_solution = NumericGradient(solution)
+d2y_solution = NumericGradient(dy_solution)
 
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 ax1.plot(nodes, f.evaluate(nodes), 'r-', label='f(x)')
-ax1.plot(nodes, d2y_solution, 'b-', label='d2y/dx2 (solution)')
+ax1.plot(nodes, d2y_solution.evaluate(nodes), 'b-', label='d2y/dx2 (solution)')
 ax1.legend()
 
 ax2.plot(nodes, dy_numeric.evaluate(nodes), 'r-', label='dy/dx')
-ax2.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
+ax2.plot(nodes, dy_solution.evaluate(nodes), 'b-', label='dy/dx (solution)')
 ax2.legend()
 
-ax3.plot(nodes, result[:, 0], 'b-', label='solution')
+ax3.plot(nodes, solution.evaluate(nodes), 'b-', label='solution')
 ax3.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
 ax3.legend()
 
-ax4.plot(nodes, result[:, 1], 'g-o', label='residual')
+ax4.plot(nodes, solution.error(nodes), 'g-o', label='residual')
 ax4.legend()
 plt.show()

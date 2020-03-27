@@ -35,32 +35,30 @@ print(integral, bc2 - bc1)
 print(np.allclose(integral, bc2 - bc1))
 print('Y0:', y.evaluate(np.asarray([start]))[0])
 
-meshes = neumann_poisson_solver_amr(start, stop, step, f, bc1, bc2,
-                                    y.evaluate_point(start),
-                                    25,
-                                    threshold, max_level=max_level)
+solution = neumann_poisson_solver_amr(start, stop, step, f, bc1, bc2,
+                                      y.evaluate_point(start),
+                                      2,
+                                      threshold, max_level=max_level)
 
-flat_mesh = meshes.flatten()
-result = np.vstack((flat_mesh.solution, flat_mesh.residual)).T
-nodes = flat_mesh.physical_nodes
+nodes = np.linspace(start, stop, num=int((stop-start)/step+1))
 
 # result = neumann_poisson_solver(nodes, f, bc1, bc2, y0=y.evaluate(np.asarray([start]))[0])
-dy_solution = np.gradient(result[:, 0], nodes, edge_order=1)
-d2y_solution = np.gradient(dy_solution, nodes, edge_order=1)
+dy_solution = NumericGradient(solution)
+d2y_solution = NumericGradient(dy_solution)
 
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
 ax1.plot(nodes, f.evaluate(nodes), 'r-', label='f(x)')
-ax1.plot(nodes, d2y_solution, 'b-', label='d2y/dx2 (solution)')
+ax1.plot(nodes, d2y_solution.evaluate(nodes), 'b-', label='d2y/dx2 (solution)')
 ax1.legend()
 
 ax2.plot(nodes, dy_numeric.evaluate(nodes), 'r-', label='dy/dx')
-ax2.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
+ax2.plot(nodes, dy_solution.evaluate(nodes), 'b-', label='dy/dx (solution)')
 ax2.legend()
 
-ax3.plot(nodes[260:], result[260:, 0], 'b-', label='solution')
+ax3.plot(nodes[:], solution.evaluate(nodes[:]), 'b-', label='solution')
 ax3.plot(nodes[:], y.evaluate(nodes)[:], 'r-', label='y(x)')
 ax3.legend()
 
-ax4.plot(nodes, result[:, 1], 'g-o', label='residual')
+ax4.plot(nodes, solution.error(nodes), 'g-o', label='residual')
 ax4.legend()
 plt.show()

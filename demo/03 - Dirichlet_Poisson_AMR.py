@@ -41,24 +41,25 @@ def plot_tree(mesh_tree, axes=None):
 start = 0.2
 stop = 1.2
 step = 0.02
-meshes = dirichlet_poisson_solver_amr(start, stop, step, f,
-                                      y.evaluate_point(start),
-                                      y.evaluate_point(stop),
-                                      max_iter=100,
-                                      threshold=1.0e-4, max_level=15)
-flat_mesh = meshes.flatten()
-dy_solution = np.gradient(flat_mesh.solution, flat_mesh.physical_nodes, edge_order=1)
-d2y_solution = np.gradient(dy_solution, flat_mesh.physical_nodes, edge_order=1)
+solution = dirichlet_poisson_solver_amr(start, stop, step, f,
+                                        y.evaluate_point(start),
+                                        y.evaluate_point(stop),
+                                        max_iter=100,
+                                        threshold=1.0e-4, max_level=15)
+dy_solution = NumericGradient(solution)
+d2y_solution = NumericGradient(dy_solution)
 
 # Plot the result
-fig, ax = plt.subplots(nrows=2, ncols=2, sharex=True)
-ax[0][0].plot(flat_mesh.physical_nodes, d2y_solution, 'b-', label='d2y/dx2 (solution)')
-ax[0][0].plot(flat_mesh.physical_nodes, f.evaluate(flat_mesh.physical_nodes), 'r-', label='f(x)')
-ax[0][1].plot(flat_mesh.physical_nodes, flat_mesh.solution, 'b-', label='solution')
-ax[0][1].plot(flat_mesh.physical_nodes, y.evaluate(flat_mesh.physical_nodes), 'r-', label='y(x)')
-ax[1][0].plot(flat_mesh.physical_nodes, flat_mesh.residual, 'g-o', label='residual')
-plot_tree(meshes, ax[1][1])
-ax[0][0].legend()
-ax[0][1].legend()
-ax[1][0].legend()
+fig, ax = plt.subplots(nrows=3, sharex=True)
+
+nodes = np.linspace(start, stop, num=int((stop-start)/step)+1)
+
+ax[0].plot(nodes, d2y_solution.evaluate(nodes), 'b-', label='d2y/dx2 (solution)')
+ax[0].plot(nodes, f.evaluate(nodes), 'r-', label='f(x)')
+ax[1].plot(nodes, solution.evaluate(nodes), 'b-', label='solution')
+ax[1].plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
+ax[2].plot(nodes, solution.error(nodes), 'g-o', label='residual')
+ax[0].legend()
+ax[1].legend()
+ax[2].legend()
 plt.show()

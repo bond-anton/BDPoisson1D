@@ -43,50 +43,21 @@ Psi = TestFunction()
 f = TestFunctional(Nd, kT, Psi)
 dfdPsi = TestFunctionalDf(Nd, kT, Psi)
 
-colors = ['b', 'g', 'y', 'k', 'm', 'c', 'b', 'g', 'y', 'k', 'm', 'c', 'b', 'g', 'y',
-          'k', 'm', 'c', 'b', 'g', 'y', 'k', 'm', 'c']
-
-
-def plot_tree(mesh_tree, axes=None):
-    colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', 'r', 'g', 'b', 'c', 'm', 'y', 'k',
-              'r', 'g', 'b', 'c', 'm', 'y', 'k', 'r', 'g', 'b', 'c', 'm', 'y', 'k']
-    styles = ['-', ':', '--', '-', ':', '--', '-', '-', ':', '--', '-', ':', '--', '-',
-              '-', ':', '--', '-', ':', '--', '-', '-', ':', '--', '-', ':', '--', '-',
-              '-', ':', '--', '-', ':', '--', '-', '-', ':', '--', '-', ':', '--', '-',
-              '-', ':', '--', '-', ':', '--', '-', '-', ':', '--', '-', ':', '--', '-']
-    if axes is None:
-        _, axes = plt.subplots()
-    for level in mesh_tree.levels:
-        for i, mesh in enumerate(mesh_tree.tree[level]):
-            axes.plot(mesh.physical_nodes, np.ones(mesh.num) * level, colors[level] + styles[i] + 'x')
-    axes.set_ylim([-1, max(mesh_tree.tree.keys()) + 1])
-    axes.grid()
-
-
 start = 0.0
 stop = 5.0
 step = 0.5
 bc1 = 1.0
 bc2 = 0.0
 
-Meshes = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdPsi, bc1, bc2,
-                                                 max_iter=1000, residual_threshold=1.5e-3,
-                                                 int_residual_threshold=1.5e-4,
-                                                 max_level=20, mesh_refinement_threshold=1e-7)
+solution = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, dfdPsi, bc1, bc2,
+                                                   max_iter=1000, residual_threshold=1.5e-3,
+                                                   int_residual_threshold=1.5e-4,
+                                                   max_level=20, mesh_refinement_threshold=1e-7)
 
-fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
+fig, (ax1, ax2) = plt.subplots(2, sharex=True)
 
-flat_grid = Meshes.flatten()
+nodes = np.linspace(start, stop, num=int((stop-start)/step+1))
 
-for level in Meshes.levels:
-    for mesh in Meshes.tree[level]:
-        ax1.plot(mesh.physical_nodes, mesh.solution, colors[level] + '-')
-        try:
-            dPsi = np.gradient(mesh.solution, mesh.physical_nodes, edge_order=2)
-            ax4.plot(mesh.physical_nodes, dPsi, colors[level] + '-')
-        except ValueError:
-            pass
-
-ax2.plot(flat_grid.physical_nodes, flat_grid.residual, 'b-')
-plot_tree(Meshes, ax3)
+ax1.plot(nodes, solution.evaluate(nodes), '-')
+ax2.plot(nodes, solution.error(nodes), '-')
 plt.show()

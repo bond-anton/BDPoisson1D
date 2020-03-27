@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from BDPoisson1D import dirichlet_non_linear_poisson_solver
 from BDFunction1D import Function
 from BDFunction1D.Functional import Functional
-from BDFunction1D.Interpolation import InterpolateFunction
+from BDFunction1D.Differentiation import NumericGradient
 
 
 class TestFunction(Function):
@@ -74,19 +74,18 @@ plt.draw()
 
 for i in range(100):
     print(i + 1)
-    result = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi, bc1=bc1, bc2=bc2, j=1.0)
-    Psi = InterpolateFunction(nodes, result[:, 0])
+    Psi_old = np.asarray(Psi.evaluate(nodes))
+    Psi = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi, bc1=bc1, bc2=bc2, j=1.0)
     f.f = Psi
     dfdPsi.f = Psi
-    DPsi = result[:, 1]
-    R = result[:, 2]
+    DPsi = Psi_old - Psi.evaluate(nodes)
     dPsi = np.gradient(Psi.evaluate(nodes), nodes, edge_order=2)
     d2Psi = np.gradient(dPsi, nodes, edge_order=2)
     Psi_line.set_ydata(Psi.evaluate(nodes))
     DPsi_line.set_ydata(DPsi)
     f_line.set_ydata(f.evaluate(nodes))
     d2Psi_line.set_ydata(d2Psi)
-    E_line.set_ydata(R)
+    E_line.set_ydata(Psi.error(nodes))
     ax1.relim()
     ax1.autoscale_view()
     ax2.relim()
