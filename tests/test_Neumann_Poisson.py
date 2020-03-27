@@ -57,13 +57,13 @@ class TestNeumann(unittest.TestCase):
         bc1 = self.dy_numeric.evaluate_point(start)
         bc2 = self.dy_numeric.evaluate_point(stop)
         result_1 = np.asarray(neumann_poisson_solver(nodes, self.d2y_numeric, bc1, bc2,
-                                                     y0=self.y.evaluate_point(start)))
+                                                     y0=self.y.evaluate_point(start)).error(nodes))
         nodes = np.linspace(start, stop, num=10000, endpoint=True)
         bc1 = self.dy_numeric.evaluate_point(start)
         bc2 = self.dy_numeric.evaluate_point(stop)
         result_2 = np.asarray(neumann_poisson_solver(nodes, self.d2y_numeric, bc1, bc2,
-                                                     y0=self.y.evaluate_point(start)))
-        self.assertTrue(max(abs(result_2[5:-5, 1])) < max(abs(result_1[5:-5, 1])))
+                                                     y0=self.y.evaluate_point(start)).error(nodes))
+        self.assertTrue(max(abs(result_2[5:-5])) < max(abs(result_1[5:-5])))
         bc1 = self.dy_numeric.evaluate_point(start)
         bc2 = self.dy_numeric.evaluate_point(stop) + 0.5
         with warnings.catch_warnings(record=True) as w:
@@ -111,9 +111,7 @@ class TestNeumann(unittest.TestCase):
         threshold = 1e-2
         max_level = 15
 
-        meshes = neumann_poisson_solver_amr(start, stop, step, self.d2y_numeric,
-                                            bc1, bc2, self.y.evaluate_point(start),
-                                            threshold, max_level=max_level)
-        flat_mesh = meshes.flatten()
-        if len(meshes.levels) < max_level:
-            self.assertTrue(max(abs(np.asarray(flat_mesh.residual[10:-10]))) < 1.0e-2)
+        sol = neumann_poisson_solver_amr(start, stop, step, self.d2y_numeric,
+                                         bc1, bc2, self.y.evaluate_point(start),
+                                         threshold, max_level=max_level)
+        self.assertTrue(max(abs(np.asarray(sol.error(sol.x)[10:-10]))) < 1.0e-2)

@@ -191,7 +191,7 @@ class TestDirichletNL(unittest.TestCase):
         bc2 = 0
 
         residual_threshold = 1.5e-3
-        int_residual_threshold = 1.5e-4
+        int_residual_threshold = 4e-4
         mesh_refinement_threshold = 1e-7
         max_iter = 1000
         max_level = 20
@@ -201,10 +201,11 @@ class TestDirichletNL(unittest.TestCase):
                                                       int_residual_threshold=int_residual_threshold,
                                                       max_level=max_level,
                                                       mesh_refinement_threshold=mesh_refinement_threshold)
-        # self.assertTrue(flat_grid.integrational_residual < int_residual_threshold)
-        self.assertTrue(max(abs(np.asarray(sol.error(np.linspace(start, stop, num=101))))) < residual_threshold * 20)
+        int_residual = np.trapz(sol.error(sol.x), sol.x)
+        self.assertTrue(int_residual < int_residual_threshold)
+        self.assertTrue(max(abs(np.asarray(sol.error(sol.x)))) < residual_threshold)
 
-        residual_threshold = 1.5e-7
+        residual_threshold = 1.5e-6
         int_residual_threshold = 1.5e-4
         mesh_refinement_threshold = 1e-5
         max_iter = 1000
@@ -214,5 +215,6 @@ class TestDirichletNL(unittest.TestCase):
                                                       int_residual_threshold=int_residual_threshold,
                                                       max_level=max_level,
                                                       mesh_refinement_threshold=mesh_refinement_threshold)
-        # self.assertTrue(flat_grid.integrational_residual < int_residual_threshold)
-        self.assertTrue(max(abs(np.asarray(sol.error(np.linspace(start, stop, num=101))))) < residual_threshold)
+        int_residual = np.trapz(sol.error(sol.x), sol.x)
+        self.assertTrue(int_residual < int_residual_threshold)
+        self.assertTrue(max(abs(np.asarray(sol.error(sol.x)))) < residual_threshold)
