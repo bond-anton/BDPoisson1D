@@ -1,5 +1,7 @@
 import numpy as np
 
+from libc.math cimport fabs
+
 from cython cimport boundscheck, wraparound
 from cpython.array cimport array, clone
 
@@ -186,7 +188,7 @@ cpdef Function dirichlet_non_linear_poisson_solver_recurrent_mesh(Mesh1DUniform 
         int i
     for i in range(max_iter):
         y0 = dirichlet_non_linear_poisson_solver_mesh(mesh, y0, f, df_dy)
-        if abs(mesh.integrational_residual) <= threshold:  # or max(abs(np.asarray(dy))) <= 2 * np.finfo(np.float).eps:
+        if fabs(mesh.integrational_residual) <= threshold:
             break
         f.__f = y0
         df_dy.__f = y0
