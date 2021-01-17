@@ -104,7 +104,6 @@ class TestNeumann(unittest.TestCase):
     def test_neumann_poisson_solver_amr(self):
         start = 0.2
         stop = 2.0
-        nodes = np.linspace(start, stop, num=5001, endpoint=True)
         bc1 = self.dy_numeric.evaluate_point(start)
         bc2 = self.dy_numeric.evaluate_point(stop)
         step = 0.00001

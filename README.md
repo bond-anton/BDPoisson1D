@@ -1,6 +1,5 @@
 # BDPoisson1D
 
-[![Build Status](https://travis-ci.org/bond-anton/BDPoisson1D.svg)](https://travis-ci.org/bond-anton/BDPoisson1D)
 [![codecov](https://codecov.io/gh/bond-anton/BDPoisson1D/branch/master/graph/badge.svg)](https://codecov.io/gh/bond-anton/BDPoisson1D)
 
 One dimensional finite difference Poisson equation solver.

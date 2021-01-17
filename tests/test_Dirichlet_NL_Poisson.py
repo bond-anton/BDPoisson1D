@@ -54,7 +54,6 @@ class TestDirichletNL(unittest.TestCase):
     def test_dirichlet_poisson_solver_arrays(self):
         start = 0.0
         stop = 4.0
-        R_1 = R_2 = 0
         nodes = np.linspace(start, stop, num=51, endpoint=True, dtype=np.float)
         Psi = testPsi()
         f = testF(self.Nd, self.kT, Psi)
@@ -84,7 +83,6 @@ class TestDirichletNL(unittest.TestCase):
     def test_dirichlet_poisson_solver(self):
         start = 0.0
         stop = 4.0
-        R_1 = R_2 = 0
         nodes = np.linspace(start, stop, num=51, endpoint=True, dtype=np.float)
         Psi = testPsi()
         f = testF(self.Nd, self.kT, Psi)
@@ -164,7 +162,6 @@ class TestDirichletNL(unittest.TestCase):
             f.f = Psi
             dfdPsi.f = Psi
         self.assertTrue(max(abs(np.asarray(mesh_2.residual))) < max(abs(np.asarray(mesh_1.residual))))
-
 
     def test_dirichlet_poisson_solver_recurrent_mesh(self):
         start = 0.0

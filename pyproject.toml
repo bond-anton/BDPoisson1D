@@ -1,3 +1,3 @@
 [build-system]
 # Minimum requirements for the build system to execute.
-requires = ["setuptools", "wheel", "cython", "scipy>=0.17.0", "BDMesh>=0.2.11", "BDFunction1D>=0.0.5"]
+requires = ["setuptools", "wheel", "cython", "scipy>=0.17.0", "BDMesh>=0.2.14", "BDFunction1D>=0.1.1"]

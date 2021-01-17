@@ -141,7 +141,6 @@ class TestDirichletFirstOrder(unittest.TestCase):
 
         err1 = np.abs(np.square(result_1 - self.y.evaluate(nodes)).mean())
 
-
         nodes = np.linspace(start, stop, num=5001, endpoint=True)
         f_nodes = self.dy_numeric.evaluate(nodes)
 
