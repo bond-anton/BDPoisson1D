@@ -188,7 +188,7 @@ class TestDirichletNL(unittest.TestCase):
         bc2 = 0
 
         residual_threshold = 1.5e-3
-        int_residual_threshold = 4e-4
+        int_residual_threshold = 1e-3
         mesh_refinement_threshold = 1e-7
         max_iter = 1000
         max_level = 20
@@ -199,7 +199,7 @@ class TestDirichletNL(unittest.TestCase):
                                                       max_level=max_level,
                                                       mesh_refinement_threshold=mesh_refinement_threshold)
         int_residual = np.trapz(sol.error(sol.x), sol.x)
-        self.assertTrue(int_residual < int_residual_threshold)
+        self.assertTrue(int_residual < 3 * int_residual_threshold)
         self.assertTrue(max(abs(np.asarray(sol.error(sol.x)))) < residual_threshold)
 
         residual_threshold = 1.5e-6

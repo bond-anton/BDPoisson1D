@@ -33,7 +33,7 @@ def plot_tree(mesh_tree, axes=None):
         _, axes = plt.subplots()
     for level in mesh_tree.levels:
         for i, mesh in enumerate(mesh_tree.tree[level]):
-            axes.plot(mesh.physical_nodes, np.ones(mesh.num) * level, colors[level] + styles[i] + 'x')
+            axes.plot(np.asarray(mesh.physical_nodes), np.ones(mesh.num) * level, colors[level] + styles[i] + 'x')
     axes.set_ylim([-1, max(mesh_tree.tree.keys()) + 1])
     axes.grid()
 
@@ -54,11 +54,11 @@ fig, ax = plt.subplots(nrows=3, sharex=True)
 
 nodes = np.linspace(start, stop, num=int((stop-start)/step)+1)
 
-ax[0].plot(nodes, d2y_solution.evaluate(nodes), 'b-', label='d2y/dx2 (solution)')
-ax[0].plot(nodes, f.evaluate(nodes), 'r-', label='f(x)')
-ax[1].plot(nodes, solution.evaluate(nodes), 'b-', label='solution')
-ax[1].plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
-ax[2].plot(nodes, solution.error(nodes), 'g-o', label='residual')
+ax[0].plot(nodes, np.asarray(d2y_solution.evaluate(nodes)), 'b-', label='d2y/dx2 (solution)')
+ax[0].plot(nodes, np.asarray(f.evaluate(nodes)), 'r-', label='f(x)')
+ax[1].plot(nodes, np.asarray(solution.evaluate(nodes)), 'b-', label='solution')
+ax[1].plot(nodes, np.asarray(y.evaluate(nodes)), 'r-', label='y(x)')
+ax[2].plot(nodes, np.asarray(solution.error(nodes)), 'g-o', label='residual')
 ax[0].legend()
 ax[1].legend()
 ax[2].legend()

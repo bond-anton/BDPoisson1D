@@ -45,7 +45,7 @@ for i in range(1, 20):
     bc = y.evaluate_point(nodes[idx])  # left Dirichlet boundary condition
     f_nodes = np.asarray(dy.evaluate(nodes))
     result = cauchy_first_order_solver_arrays(nodes, f_nodes, bc, idx, j=1.0)  # solve Poisson equation
-    ax.plot(nodes, result)
+    ax.plot(nodes, np.asarray(result))
     dy_solution = np.gradient(result[:], nodes, edge_order=2)
     hundreds.append(i)
     errs.append(np.sqrt(np.square(result[2:-2] - np.asarray(y.evaluate(nodes[2:-2]))).mean()))
@@ -65,8 +65,8 @@ ax1.plot(nodes, f_nodes, 'r-', label='f(x)')
 ax1.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
 ax1.legend()
 
-ax2.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
-ax2.plot(nodes, result[:], 'b-', label='solution')
+ax2.plot(nodes, np.asarray(y.evaluate(nodes)), 'r-', label='y(x)')
+ax2.plot(nodes, np.asarray(result[:]), 'b-', label='solution')
 ax2.legend()
 
 ax3.plot(nodes[2:-2], result[2:-2] - np.asarray(y.evaluate(nodes[2:-2])), 'g-o', label='residual')

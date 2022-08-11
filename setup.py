@@ -138,6 +138,6 @@ setup(
                                   'DirichletLinear.pxd', 'DirichletNonLinear.pxd',
                                   'NeumannLinear.pxd',
                                   'Function.pxd', '_helpers.pxd']},
-    install_requires=['numpy', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.14', 'BDFunction1D>=0.1.1'],
+    install_requires=['numpy', 'scipy>=0.17.0', 'matplotlib', 'BDMesh>=0.2.18', 'BDFunction1D>=0.1.2'],
     cmdclass={'build_ext': CustomBuildExt},
 )

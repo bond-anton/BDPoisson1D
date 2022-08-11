@@ -158,20 +158,20 @@ print('Reached MSE:', mse, 'in', i, 'iterations.')
 dy_solution = NumericGradient(y)
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
-ax1.plot(nodes, f.evaluate(nodes), 'r-', label='f(x)')
-ax1.plot(nodes, dy_solution.evaluate(nodes) + np.asarray(y.evaluate(nodes)) * np.asarray(p.evaluate(nodes)),
+ax1.plot(nodes, np.asarray(f.evaluate(nodes)), 'r-', label='f(x)')
+ax1.plot(nodes, np.asarray(dy_solution.evaluate(nodes)) + np.asarray(y.evaluate(nodes)) * np.asarray(p.evaluate(nodes)),
          'b-', label='dy/dx + p(x)*y (solution)')
 ax1.legend()
 
-ax2.plot(nodes, dy0_numeric.evaluate(nodes), 'r-', label='dy/dx')
-ax2.plot(nodes, dy_solution.evaluate(nodes), 'b-', label='dy/dx (solution)')
+ax2.plot(nodes, np.asarray(dy0_numeric.evaluate(nodes)), 'r-', label='dy/dx')
+ax2.plot(nodes, np.asarray(dy_solution.evaluate(nodes)), 'b-', label='dy/dx (solution)')
 ax2.legend()
 
-ax3.plot(nodes, y0.evaluate(nodes), 'r-', label='y(x)')
-ax3.plot(nodes, y.evaluate(nodes), 'b-', label='solution')
+ax3.plot(nodes, np.asarray(y0.evaluate(nodes)), 'r-', label='y(x)')
+ax3.plot(nodes, np.asarray(y.evaluate(nodes)), 'b-', label='solution')
 ax3.legend()
 
-ax4.plot(nodes, y.error(nodes), 'g-o', label='residual')
+ax4.plot(nodes, np.asarray(y.error(nodes)), 'g-o', label='residual')
 ax4.legend()
 plt.show()
 

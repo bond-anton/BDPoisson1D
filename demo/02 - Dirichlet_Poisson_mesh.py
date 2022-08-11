@@ -36,18 +36,18 @@ d2y_solution = np.gradient(dy_solution, mesh.physical_nodes, edge_order=2)
 
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
-ax1.plot(mesh.physical_nodes, f.evaluate(mesh.physical_nodes), 'r-', label='f(x)')
-ax1.plot(mesh.physical_nodes, d2y_solution, 'b-', label='d2y/dx2 (solution)')
+ax1.plot(np.asarray(mesh.physical_nodes), np.asarray(f.evaluate(mesh.physical_nodes)), 'r-', label='f(x)')
+ax1.plot(np.asarray(mesh.physical_nodes), d2y_solution, 'b-', label='d2y/dx2 (solution)')
 ax1.legend()
 
-ax2.plot(mesh.physical_nodes, dy_numeric.evaluate(mesh.physical_nodes), 'r-', label='dy/dx')
-ax2.plot(mesh.physical_nodes, dy_solution, 'b-', label='dy/dx (solution)')
+ax2.plot(np.asarray(mesh.physical_nodes), np.asarray(dy_numeric.evaluate(mesh.physical_nodes)), 'r-', label='dy/dx')
+ax2.plot(np.asarray(mesh.physical_nodes), dy_solution, 'b-', label='dy/dx (solution)')
 ax2.legend()
 
-ax3.plot(mesh.physical_nodes, mesh.solution, 'b-', label='solution')
-ax3.plot(mesh.physical_nodes, y.evaluate(mesh.physical_nodes), 'r-', label='y(x)')
+ax3.plot(np.asarray(mesh.physical_nodes), np.asarray(mesh.solution), 'b-', label='solution')
+ax3.plot(np.asarray(mesh.physical_nodes), np.asarray(y.evaluate(mesh.physical_nodes)), 'r-', label='y(x)')
 ax3.legend()
 
-ax4.plot(mesh.physical_nodes, mesh.residual, 'g-o', label='residual')
+ax4.plot(np.asarray(mesh.physical_nodes), np.asarray(mesh.residual), 'g-o', label='residual')
 ax4.legend()
 plt.show()

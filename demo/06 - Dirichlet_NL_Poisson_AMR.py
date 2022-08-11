@@ -46,6 +46,7 @@ dfdPsi = TestFunctionalDf(Nd, kT, Psi)
 start = 0.0
 stop = 5.0
 step = 0.5
+step_plot = step / 100
 bc1 = 1.0
 bc2 = 0.0
 
@@ -53,11 +54,12 @@ solution = dirichlet_non_linear_poisson_solver_amr(start, stop, step, Psi, f, df
                                                    max_iter=1000, residual_threshold=1.5e-3,
                                                    int_residual_threshold=1.5e-4,
                                                    max_level=20, mesh_refinement_threshold=1e-7)
+print('checking BC. SOL:', solution.evaluate_point(start), solution.evaluate_point(stop), 'REF:', bc1, bc2)
 
 fig, (ax1, ax2) = plt.subplots(2, sharex=True)
 
-nodes = np.linspace(start, stop, num=int((stop-start)/step+1))
+nodes = np.linspace(start, stop, num=int((stop-start)/step_plot+1))
 
-ax1.plot(nodes, solution.evaluate(nodes), '-')
-ax2.plot(nodes, solution.error(nodes), '-')
+ax1.plot(nodes, np.asarray(solution.evaluate(nodes)), '-')
+ax2.plot(nodes, np.asarray(solution.error(nodes)), '-')
 plt.show()

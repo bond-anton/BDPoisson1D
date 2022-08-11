@@ -50,7 +50,9 @@ bc2 = 0.0
 
 root_mesh = Mesh1DUniform(0.0, 10.0, bc1, bc2, 0.2)
 
+print('checking BC. TF:', Psi.evaluate_point(0), Psi.evaluate_point(10), 'REF:', bc1, bc2)
 Psi = dirichlet_non_linear_poisson_solver_recurrent_mesh(root_mesh, Psi, f, dfdPsi, max_iter=1000, threshold=1e-6)
+print('checking BC. SOL:', Psi.evaluate_point(0), Psi.evaluate_point(10), 'REF:', bc1, bc2)
 # Psi = InterpolateFunction(root_mesh.physical_nodes, root_mesh.solution)
 
 mesh_refinement_threshold = 1e-7
@@ -60,10 +62,10 @@ dPsi = NumericGradient(Psi)
 d2Psi = NumericGradient(dPsi)
 
 _, (ax1, ax2, ax3) = plt.subplots(3, sharex=True)
-ax1.plot(root_mesh.physical_nodes, Psi.evaluate(root_mesh.physical_nodes))
+ax1.plot(np.asarray(root_mesh.physical_nodes), np.asarray(Psi.evaluate(root_mesh.physical_nodes)))
 ax1.plot(np.asarray(root_mesh.physical_nodes)[idxs], np.asarray(root_mesh.solution)[idxs], 'r-o')
-ax2.plot(root_mesh.physical_nodes, root_mesh.residual)
+ax2.plot(np.asarray(root_mesh.physical_nodes), np.asarray(root_mesh.residual))
 ax2.plot(np.asarray(root_mesh.physical_nodes)[idxs], np.asarray(root_mesh.residual)[idxs], 'r-o')
-ax3.plot(root_mesh.physical_nodes, f.evaluate(root_mesh.physical_nodes))
-ax3.plot(root_mesh.physical_nodes, d2Psi.evaluate(root_mesh.physical_nodes))
+ax3.plot(np.asarray(root_mesh.physical_nodes), np.asarray(f.evaluate(root_mesh.physical_nodes)))
+ax3.plot(np.asarray(root_mesh.physical_nodes), np.asarray(d2Psi.evaluate(root_mesh.physical_nodes)))
 plt.show()

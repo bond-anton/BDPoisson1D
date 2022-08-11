@@ -43,7 +43,7 @@ Psi = TestFunction()
 f = TestFunctional(Nd, kT, Psi)
 dfdPsi = TestFunctionalDf(Nd, kT, Psi)
 
-nodes = np.linspace(0., 4., num=21, endpoint=True, dtype=np.float)
+nodes = np.linspace(0., 4., num=21, endpoint=True, dtype=float)
 bc1 = 1.0
 bc2 = 0.0
 
@@ -56,9 +56,9 @@ ax1.set_autoscaley_on(True)
 ax2.set_autoscaley_on(True)
 ax3.set_autoscaley_on(True)
 ax4.set_autoscaley_on(True)
-Psi_line, = ax1.plot(nodes, Psi.evaluate(nodes))
+Psi_line, = ax1.plot(nodes, np.asarray(Psi.evaluate(nodes)))
 DPsi_line, = ax2.plot(nodes, DPsi)
-f_line, = ax3.plot(nodes, f.evaluate(nodes))
+f_line, = ax3.plot(nodes, np.asarray(f.evaluate(nodes)))
 E_line, = ax4.plot(nodes, E)
 print(Psi.evaluate(nodes), Psi.evaluate(nodes).size, np.asarray(Psi.evaluate(nodes)).dtype)
 
@@ -75,6 +75,7 @@ plt.draw()
 for i in range(100):
     print(i + 1)
     Psi_old = np.asarray(Psi.evaluate(nodes))
+    print('  BC check:', Psi.evaluate_point(0), Psi.evaluate_point(4), bc1, bc2)
     Psi = dirichlet_non_linear_poisson_solver(nodes, Psi, f, dfdPsi, bc1=bc1, bc2=bc2, j=1.0)
     f.f = Psi
     dfdPsi.f = Psi

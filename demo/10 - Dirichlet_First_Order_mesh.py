@@ -78,22 +78,24 @@ plt.show()
 
 # Plot the result
 fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True)
-ax1.plot(root_mesh.physical_nodes, f.evaluate(root_mesh.physical_nodes), 'r-', label='f(x)')
-ax1.plot(root_mesh.physical_nodes,
-         dy_solution + np.asarray(root_mesh.solution) * np.asarray(p.evaluate(root_mesh.physical_nodes)),
+ax1.plot(np.asarray(root_mesh.physical_nodes), np.asarray(f.evaluate(root_mesh.physical_nodes)), 'r-', label='f(x)')
+ax1.plot(np.asarray(root_mesh.physical_nodes),
+         np.asarray(dy_solution) + np.asarray(root_mesh.solution) * np.asarray(p.evaluate(root_mesh.physical_nodes)),
          'b-', label='dy/dx + p(x)*y (solution)')
 ax1.legend()
 
-ax2.plot(root_mesh.physical_nodes, dy_numeric.evaluate(root_mesh.physical_nodes), 'g-', label='dy/dx')
-ax2.plot(root_mesh.physical_nodes, dy_analytic.evaluate(root_mesh.physical_nodes), 'r-', label='dy/dx')
-ax2.plot(root_mesh.physical_nodes, dy_solution, 'b-', label='dy/dx (solution)')
+ax2.plot(np.asarray(root_mesh.physical_nodes), np.asarray(dy_numeric.evaluate(root_mesh.physical_nodes)),
+         'g-', label='dy/dx')
+ax2.plot(np.asarray(root_mesh.physical_nodes), np.asarray(dy_analytic.evaluate(root_mesh.physical_nodes)),
+         'r-', label='dy/dx')
+ax2.plot(np.asarray(root_mesh.physical_nodes), np.asarray(dy_solution), 'b-', label='dy/dx (solution)')
 ax2.legend()
 
-ax3.plot(root_mesh.physical_nodes, y.evaluate(root_mesh.physical_nodes), 'r-', label='y(x)')
-ax3.plot(root_mesh.physical_nodes, root_mesh.solution, 'b-', label='solution')
+ax3.plot(np.asarray(root_mesh.physical_nodes), np.asarray(y.evaluate(root_mesh.physical_nodes)), 'r-', label='y(x)')
+ax3.plot(np.asarray(root_mesh.physical_nodes), np.asarray(root_mesh.solution), 'b-', label='solution')
 ax3.legend()
 
-ax4.plot(root_mesh.physical_nodes, np.asarray(y.evaluate(root_mesh.physical_nodes)) - root_mesh.solution,
+ax4.plot(np.asarray(root_mesh.physical_nodes), np.asarray(y.evaluate(root_mesh.physical_nodes)) - root_mesh.solution,
          'g-o', label='residual')
 ax4.legend()
 plt.show()

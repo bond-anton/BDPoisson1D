@@ -69,12 +69,12 @@ ax1.plot(nodes, f_nodes, 'r-', label='f(x)')
 ax1.plot(nodes, dy_solution + np.asarray(result[:]) * np.asarray(p_nodes), 'b-', label='dy/dx + p(x)*y (solution)')
 ax1.legend()
 
-ax2.plot(nodes, dy_numeric.evaluate(nodes), 'r-', label='dy/dx')
+ax2.plot(nodes, np.asarray(dy_numeric.evaluate(nodes)), 'r-', label='dy/dx')
 ax2.plot(nodes, dy_solution, 'b-', label='dy/dx (solution)')
 ax2.legend()
 
-ax3.plot(nodes, y.evaluate(nodes), 'r-', label='y(x)')
-ax3.plot(nodes, result[:], 'b-', label='solution')
+ax3.plot(nodes, np.asarray(y.evaluate(nodes)), 'r-', label='y(x)')
+ax3.plot(nodes, np.asarray(result[:]), 'b-', label='solution')
 ax3.legend()
 
 ax4.plot(nodes[2:-2], result[2:-2] - np.asarray(y.evaluate(nodes[2:-2])), 'g-o', label='residual')
